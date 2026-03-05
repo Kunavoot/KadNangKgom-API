@@ -8,7 +8,20 @@ const pool = mysql.createPool({
     database: process.env.DB_NAME,
     waitForConnections: true,
     connectionLimit: 10,
-    queueLimit: 0
+    queueLimit: 0,
+    namedPlaceholders: true
 });
 
-module.exports = pool.promise();
+const promisePool = pool.promise();
+
+// ทดสอบการเชื่อมต่อ Database
+pool.getConnection((err, connection) => {
+    if (err) {
+        console.error('❌ Error connecting to the database:', err.message);
+    } else {
+        console.log('✅ Database connected successfully!');
+        if (connection) connection.release();
+    }
+});
+
+module.exports = promisePool;
