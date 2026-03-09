@@ -70,7 +70,41 @@ const getPrefix = async (req, res) => {
     }
 }
 
+const getMemberType = async (req, res) => {
+    const sql = `SELECT * FROM member_type_table`;
+
+    try {
+        const [rows] = await promisePool.query(sql);
+
+        res.status(200).json({
+            message: "ดึงข้อมูลประเภทสมาชิกสำเร็จ",
+            data: rows
+        });
+    } catch (error) {
+        console.error("Error fetching data in:", error);
+        res.status(500).json({ message: "เกิดข้อผิดพลาดในการดึงข้อมูลประเภทสมาชิก" });
+    }
+}
+
+const getProductType = async (req, res) => {
+    const sql = `SELECT * FROM product_type_table`;
+
+    try {
+        const [rows] = await promisePool.query(sql);
+
+        res.status(200).json({
+            message: "ดึงข้อมูลประเภทสินค้าสำเร็จ",
+            data: rows
+        });
+    } catch (error) {
+        console.error("Error fetching data in:", error);
+        res.status(500).json({ message: "เกิดข้อผิดพลาดในการดึงข้อมูลประเภทสินค้า" });
+    }
+}
+
 module.exports = {
     checkLogin,
     getPrefix,
+    getMemberType,
+    getProductType
 };
