@@ -142,7 +142,11 @@ const delAdmin = async (req, res) => {
 
 const getTrader = async (req, res) => {
     const sql = `
-    SELECT t.*, mt.memtype_name AS trader_mtype_name, pt.ptype_name AS trader_ptype_name 
+    SELECT t.*,
+        DATE_FORMAT(t.trader_business, '%Y-%m-%d') AS trader_business,
+        DATE_FORMAT(t.trader_date, '%Y-%m-%d') AS trader_date,
+        mt.memtype_name AS trader_mtype_name,
+        pt.ptype_name AS trader_ptype_name
     FROM trader_table t
     JOIN member_type_table mt ON t.trader_mtype = mt.memtype_id
     JOIN product_type_table pt ON t.trader_ptype = pt.ptype_id
