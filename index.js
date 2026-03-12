@@ -1,7 +1,11 @@
 const express = require('express');
 const app = express();
 const cors = require('cors');
+const path = require('path');
 require('dotenv').config();
+
+// Serves static files from the 'image' directory
+app.use('/image', express.static(path.join(__dirname, 'image')));
 
 const systemRoutes = require('./routes/system.routes');
 const adminRoutes = require('./routes/admin.routes');

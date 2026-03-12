@@ -166,10 +166,20 @@ const getTrader = async (req, res) => {
 }
 
 const addTrader = async (req, res) => {
+    // If files were uploaded, add the filenames to req.body
+    if (req.files) {
+        if (req.files['trader_pic_trader']) {
+            req.body.trader_pic_trader = req.files['trader_pic_trader'][0].filename;
+        }
+        if (req.files['trader_pic_product']) {
+            req.body.trader_pic_product = req.files['trader_pic_product'][0].filename;
+        }
+    }
+
     const sql = `
     INSERT INTO trader_table (
-    trader_mtype,
-    trader_ptype,
+        trader_mtype,
+        trader_ptype,
         trader_pname,
         trader_name,
         trader_sname,
@@ -232,6 +242,16 @@ const addTrader = async (req, res) => {
 }
 
 const editTrader = async (req, res) => {
+    // If files were uploaded, add the filenames to req.body
+    if (req.files) {
+        if (req.files['trader_pic_trader']) {
+            req.body.trader_pic_trader = req.files['trader_pic_trader'][0].filename;
+        }
+        if (req.files['trader_pic_product']) {
+            req.body.trader_pic_product = req.files['trader_pic_product'][0].filename;
+        }
+    }
+
     const sql = `
     UPDATE trader_table SET
         trader_mtype = :trader_mtype,
