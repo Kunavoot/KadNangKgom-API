@@ -319,7 +319,9 @@ const delTrader = async (req, res) => {
 
 const getGroup = async (req, res) => {
     const sql = `
-    SELECT * FROM group_table;
+    SELECT * 
+    FROM group_table
+    ORDER BY group_id ASC;
     `;
 
     try {
