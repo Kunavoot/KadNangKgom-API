@@ -41,4 +41,10 @@ router.post('/addTrader', traderUpload, adminController.addTrader);
 router.put('/editTrader/:trader_no', traderUpload, adminController.editTrader);
 router.delete('/delTrader/:trader_no', adminController.delTrader);
 
+// จัดการข้อมูลกลุ่มสังกัด
+router.get('/getGroup', adminController.getGroup);
+router.post('/addGroup', adminController.addGroup);
+router.put('/editGroup/:group_id', adminController.editGroup);
+router.delete('/delGroup/:group_id', adminController.delGroup);
+
 module.exports = router;

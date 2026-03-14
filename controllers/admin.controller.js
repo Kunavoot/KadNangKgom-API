@@ -6,7 +6,8 @@ const getAdmin = async (req, res) => {
         *, 
         DATE_FORMAT(admin_birth, '%Y-%m-%d') AS admin_birth, 
         DATE_FORMAT(admin_date, '%Y-%m-%d') AS admin_date 
-    FROM admin_table;
+    FROM admin_table
+    ORDER BY admin_no ASC;
     `;
 
     try {
@@ -143,6 +144,7 @@ const delAdmin = async (req, res) => {
 const getTrader = async (req, res) => {
     const sql = `
     SELECT t.*,
+        LPAD(t.trader_no, 8, '0') AS trader_no,
         DATE_FORMAT(t.trader_business, '%Y-%m-%d') AS trader_business,
         DATE_FORMAT(t.trader_date, '%Y-%m-%d') AS trader_date,
         mt.memtype_name AS trader_mtype_name,
@@ -150,6 +152,7 @@ const getTrader = async (req, res) => {
     FROM trader_table t
     JOIN member_type_table mt ON t.trader_mtype = mt.memtype_id
     JOIN product_type_table pt ON t.trader_ptype = pt.ptype_id
+    ORDER BY t.trader_no ASC;
     `;
 
     try {
@@ -314,6 +317,90 @@ const delTrader = async (req, res) => {
     }
 }
 
+const getGroup = async (req, res) => {
+    const sql = `
+    SELECT * FROM group_table;
+    `;
+
+    try {
+        const [rows] = await promisePool.query(sql);
+
+        res.status(200).json({
+            message: "ดึงข้อมูลกลุ่มสำเร็จ",
+            data: rows
+        });
+    } catch (error) {
+        console.error("Error fetching data in:", error);
+        res.status(500).json({ message: "เกิดข้อผิดพลาดในการดึงข้อมูลกลุ่ม" });
+    }
+}
+
+const addGroup = async (req, res) => {
+    const sql = `
+    INSERT INTO group_table (
+        group_name,
+        group_detail
+    ) VALUES (
+        :group_name,
+        :group_detail
+    );
+    `;
+
+    try {
+        const [rows] = await promisePool.query(sql, req.body);
+
+        res.status(200).json({
+            message: "เพิ่มข้อมูลกลุ่มสำเร็จ",
+            data: rows
+        });
+    } catch (error) {
+        console.error("Error add data in:", error);
+        res.status(500).json({ message: "เกิดข้อผิดพลาดในการเพิ่มข้อมูลกลุ่ม" });
+    }
+}
+
+const editGroup = async (req, res) => {
+    const sql = `
+    UPDATE group_table SET
+        group_name = :group_name,
+        group_detail = :group_detail
+    WHERE group_id = :group_id;
+    `;
+
+    try {
+        const [rows] = await promisePool.query(sql, {
+            group_id: req.params.group_id,
+            ...req.body
+        });
+
+        res.status(200).json({
+            message: "แก้ไขข้อมูลกลุ่มสำเร็จ",
+            data: rows
+        });
+    } catch (error) {
+        console.error("Error edit data in:", error);
+        res.status(500).json({ message: "เกิดข้อผิดพลาดในการแก้ไขข้อมูลกลุ่ม" });
+    }
+}
+
+const delGroup = async (req, res) => {
+    const sql = `
+    DELETE FROM group_table WHERE group_id = :group_id;
+    `;
+
+    try {
+        const [rows] = await promisePool.query(sql, { group_id: req.params.group_id });
+
+        res.status(200).json({
+            message: "ลบข้อมูลกลุ่มสำเร็จ",
+            data: rows
+        });
+    } catch (error) {
+        console.error("Error delete data in:", error);
+        res.status(500).json({ message: "เกิดข้อผิดพลาดในการลบข้อมูลกลุ่ม" });
+    }
+}
+
 module.exports = {
     getAdmin,
     addAdmin,
@@ -322,5 +409,9 @@ module.exports = {
     getTrader,
     addTrader,
     editTrader,
-    delTrader
+    delTrader,
+    getGroup,
+    addGroup,
+    editGroup,
+    delGroup
 };
