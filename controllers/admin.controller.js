@@ -403,6 +403,92 @@ const delGroup = async (req, res) => {
     }
 }
 
+const getMemberType = async (req, res) => {
+    const sql = `
+    SELECT * 
+    FROM member_type_table
+    ORDER BY memtype_id ASC;
+    `;
+
+    try {
+        const [rows] = await promisePool.query(sql);
+
+        res.status(200).json({
+            message: "ดึงข้อมูลประเภทสมาชิกสำเร็จ",
+            data: rows
+        });
+    } catch (error) {
+        console.error("Error fetching data in:", error);
+        res.status(500).json({ message: "เกิดข้อผิดพลาดในการดึงข้อมูลประเภทสมาชิก" });
+    }
+}
+
+const addMemberType = async (req, res) => {
+    const sql = `
+    INSERT INTO member_type_table (
+        memtype_name,
+        memtype_detail
+    ) VALUES (
+        :memtype_name,
+        :memtype_detail
+    );
+    `;
+
+    try {
+        const [rows] = await promisePool.query(sql, req.body);
+
+        res.status(200).json({
+            message: "เพิ่มข้อมูลประเภทสมาชิกสำเร็จ",
+            data: rows
+        });
+    } catch (error) {
+        console.error("Error add data in:", error);
+        res.status(500).json({ message: "เกิดข้อผิดพลาดในการเพิ่มข้อมูลประเภทสมาชิก" });
+    }
+}
+
+const editMemberType = async (req, res) => {
+    const sql = `
+    UPDATE member_type_table SET
+        memtype_name = :memtype_name,
+        memtype_detail = :memtype_detail
+    WHERE memtype_id = :memtype_id;
+    `;
+
+    try {
+        const [rows] = await promisePool.query(sql, {
+            memtype_id: req.params.memtype_id,
+            ...req.body
+        });
+
+        res.status(200).json({
+            message: "แก้ไขข้อมูลประเภทสมาชิกสำเร็จ",
+            data: rows
+        });
+    } catch (error) {
+        console.error("Error edit data in:", error);
+        res.status(500).json({ message: "เกิดข้อผิดพลาดในการแก้ไขข้อมูลประเภทสมาชิก" });
+    }
+}
+
+const delMemberType = async (req, res) => {
+    const sql = `
+    DELETE FROM member_type_table WHERE memtype_id = :memtype_id;
+    `;
+
+    try {
+        const [rows] = await promisePool.query(sql, { memtype_id: req.params.memtype_id });
+
+        res.status(200).json({
+            message: "ลบข้อมูลประเภทสมาชิกสำเร็จ",
+            data: rows
+        });
+    } catch (error) {
+        console.error("Error delete data in:", error);
+        res.status(500).json({ message: "เกิดข้อผิดพลาดในการลบข้อมูลประเภทสมาชิก" });
+    }
+}
+
 module.exports = {
     getAdmin,
     addAdmin,
@@ -415,5 +501,9 @@ module.exports = {
     getGroup,
     addGroup,
     editGroup,
-    delGroup
+    delGroup,
+    getMemberType,
+    addMemberType,
+    editMemberType,
+    delMemberType
 };

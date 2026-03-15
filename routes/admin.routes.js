@@ -47,4 +47,10 @@ router.post('/addGroup', adminController.addGroup);
 router.put('/editGroup/:group_id', adminController.editGroup);
 router.delete('/delGroup/:group_id', adminController.delGroup);
 
+// จัดการข้อมูลประเภทสมาชิก
+router.get('/getMemberType', adminController.getMemberType);
+router.post('/addMemberType', adminController.addMemberType);
+router.put('/editMemberType/:memtype_id', adminController.editMemberType);
+router.delete('/delMemberType/:memtype_id', adminController.delMemberType);
+
 module.exports = router;
