@@ -489,6 +489,135 @@ const delMemberType = async (req, res) => {
     }
 }
 
+const getProductType = async (req, res) => {
+    const sql = `
+    SELECT * 
+    FROM product_type_table
+    ORDER BY ptype_id ASC;
+    `;
+
+    try {
+        const [rows] = await promisePool.query(sql);
+
+        res.status(200).json({
+            message: "ดึงข้อมูลประเภทสินค้าสำเร็จ",
+            data: rows
+        });
+    } catch (error) {
+        console.error("Error fetching data in:", error);
+        res.status(500).json({ message: "เกิดข้อผิดพลาดในการดึงข้อมูลประเภทสินค้า" });
+    }
+}
+
+const addProductType = async (req, res) => {
+    const sql = `
+    INSERT INTO product_type_table (
+        ptype_name,
+        ptype_detail
+    ) VALUES (
+        :ptype_name,
+        :ptype_detail
+    );
+    `;
+
+    try {
+        const [rows] = await promisePool.query(sql, req.body);
+
+        res.status(200).json({
+            message: "เพิ่มข้อมูลประเภทสินค้าสำเร็จ",
+            data: rows
+        });
+    } catch (error) {
+        console.error("Error add data in:", error);
+        res.status(500).json({ message: "เกิดข้อผิดพลาดในการเพิ่มข้อมูลประเภทสินค้า" });
+    }
+}
+
+const editProductType = async (req, res) => {
+    const sql = `
+    UPDATE product_type_table SET
+        ptype_name = :ptype_name,
+        ptype_detail = :ptype_detail
+    WHERE ptype_id = :ptype_id;
+    `;
+
+    try {
+        const [rows] = await promisePool.query(sql, {
+            ptype_id: req.params.ptype_id,
+            ...req.body
+        });
+
+        res.status(200).json({
+            message: "แก้ไขข้อมูลประเภทสินค้าสำเร็จ",
+            data: rows
+        });
+    } catch (error) {
+        console.error("Error edit data in:", error);
+        res.status(500).json({ message: "เกิดข้อผิดพลาดในการแก้ไขข้อมูลประเภทสินค้า" });
+    }
+}
+
+const delProductType = async (req, res) => {
+    const sql = `
+    DELETE FROM product_type_table WHERE ptype_id = :ptype_id;
+    `;
+
+    try {
+        const [rows] = await promisePool.query(sql, { ptype_id: req.params.ptype_id });
+
+        res.status(200).json({
+            message: "ลบข้อมูลประเภทสินค้าสำเร็จ",
+            data: rows
+        });
+    } catch (error) {
+        console.error("Error delete data in:", error);
+        res.status(500).json({ message: "เกิดข้อผิดพลาดในการลบข้อมูลประเภทสินค้า" });
+    }
+}
+
+const getMarket_Summary = async (req, res) => {
+    const sql = `
+    SELECT g.group_id , g.group_name, COUNT(m.market_id) AS total_stall , IFNULL(SUM(m.market_status = 1), 0) AS total_rented
+    FROM group_table g
+    LEFT JOIN market_table m ON g.group_id = m.market_group
+    GROUP BY g.group_id
+    ORDER BY g.group_id ASC;
+    `;
+
+    try {
+        const [rows] = await promisePool.query(sql);
+
+        res.status(200).json({
+            message: "ดึงข้อมูลภาพรวมตลาดสำเร็จ",
+            data: rows
+        });
+    } catch (error) {
+        console.error("Error fetching data in:", error);
+        res.status(500).json({ message: "เกิดข้อผิดพลาดในการดึงข้อมูลภาพรวมตลาด" });
+    }
+}
+
+const getMarket_Detail = async (req, res) => {
+    const sql = `
+    SELECT * 
+    FROM market_table
+    WHERE market_group = :group_id
+    ORDER BY market_id ASC;
+    `;
+
+    try {
+        const [rows] = await promisePool.query(sql, { group_id: req.params.group_id });
+
+        res.status(200).json({
+            message: "ดึงข้อมูลรายละเอียดตลาดสำเร็จ",
+            data: rows
+        });
+    } catch (error) {
+        console.error("Error fetching data in:", error);
+        res.status(500).json({ message: "เกิดข้อผิดพลาดในการดึงข้อมูลรายละเอียดตลาด" });
+    }
+}
+
 module.exports = {
     getAdmin,
     addAdmin,
@@ -505,5 +634,11 @@ module.exports = {
     getMemberType,
     addMemberType,
     editMemberType,
-    delMemberType
+    delMemberType,
+    getProductType,
+    addProductType,
+    editProductType,
+    delProductType,
+    getMarket_Summary,
+    getMarket_Detail
 };

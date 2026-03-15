@@ -53,4 +53,14 @@ router.post('/addMemberType', adminController.addMemberType);
 router.put('/editMemberType/:memtype_id', adminController.editMemberType);
 router.delete('/delMemberType/:memtype_id', adminController.delMemberType);
 
+// จัดการข้อมูลประเภทสินค้า
+router.get('/getProductType', adminController.getProductType);
+router.post('/addProductType', adminController.addProductType);
+router.put('/editProductType/:ptype_id', adminController.editProductType);
+router.delete('/delProductType/:ptype_id', adminController.delProductType);
+
+// จัดการข้อมูลพื้นที่ตลาด
+router.get('/getMarket_Summary', adminController.getMarket_Summary);
+router.get('/getMarket_Detail/:group_id', adminController.getMarket_Detail);
+
 module.exports = router;
