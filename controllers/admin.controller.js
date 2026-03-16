@@ -1,4 +1,6 @@
 const promisePool = require('../config/db.js');
+const fs = require('fs');
+const path = require('path');
 
 const getAdmin = async (req, res) => {
     const sql = `
@@ -300,12 +302,31 @@ const editTrader = async (req, res) => {
 }
 
 const delTrader = async (req, res) => {
-    const sql = `
-    DELETE FROM trader_table WHERE trader_no = :trader_no;
-    `;
+    const trader_no = req.params.trader_no;
+    const sql_select = `SELECT trader_pic_trader, trader_pic_product FROM trader_table WHERE trader_no = :trader_no;`;
+    const sql_delete = `DELETE FROM trader_table WHERE trader_no = :trader_no;`;
 
     try {
-        const [rows] = await promisePool.query(sql, { trader_no: req.params.trader_no });
+        const [traderRows] = await promisePool.query(sql_select, { trader_no });
+        const [rows] = await promisePool.query(sql_delete, { trader_no });
+
+        if (traderRows.length > 0) {
+            const picTrader = traderRows[0].trader_pic_trader;
+            const picProduct = traderRows[0].trader_pic_product;
+
+            if (picTrader) {
+                const picTraderPath = path.join(__dirname, '../image/trader', picTrader);
+                if (fs.existsSync(picTraderPath)) {
+                    fs.unlinkSync(picTraderPath);
+                }
+            }
+            if (picProduct) {
+                const picProductPath = path.join(__dirname, '../image/product', picProduct);
+                if (fs.existsSync(picProductPath)) {
+                    fs.unlinkSync(picProductPath);
+                }
+            }
+        }
 
         res.status(200).json({
             message: "ลบข้อมูลผู้ค้าสำเร็จ",
@@ -618,6 +639,151 @@ const getMarket_Detail = async (req, res) => {
     }
 }
 
+const addMarket_Detail = async (req, res) => {
+    if (req.files && req.files['market_img']) {
+        req.body.market_img = req.files['market_img'][0].filename;
+    }
+
+    let { market_id, market_group, market_area, market_price, market_addr, market_img, market_status } = req.body;
+
+    try {
+        if (!market_id) {
+            const groupStr = String(market_group).padStart(2, '0');
+            
+            const sql_get_id = `
+            SELECT 
+                LPAD(
+                    IFNULL(
+                        -- หาเลขที่น้อยที่สุดที่ (ตัวมันเอง + 1) แล้วยังไม่มีในตาราง
+                        (SELECT MIN(CAST(SUBSTRING(t1.market_id, 3) AS UNSIGNED) + 1) 
+                         FROM market_table t1 
+                         LEFT JOIN market_table t2 
+                           ON CAST(SUBSTRING(t1.market_id, 3) AS UNSIGNED) + 1 = CAST(SUBSTRING(t2.market_id, 3) AS UNSIGNED) 
+                          AND LEFT(t2.market_id, 2) = :market_group
+                         WHERE t2.market_id IS NULL 
+                           AND LEFT(t1.market_id, 2) = :market_group),
+                        1 
+                    ), 
+                    3, '0' 
+                ) AS next_id;
+            `;
+            
+            const [idRows] = await promisePool.query(sql_get_id, { market_group: groupStr });
+            market_id = groupStr + idRows[0].next_id;
+        }
+
+        const sql = `
+        INSERT INTO market_table (
+            market_id,
+            market_group,
+            market_area,
+            market_price,
+            market_addr,
+            market_img,
+            market_status
+        ) VALUES (
+            :market_id,
+            :market_group,
+            :market_area,
+            :market_price,
+            :market_addr,
+            :market_img,
+            :market_status
+        );
+        `;
+
+        const [rows] = await promisePool.query(sql, {
+            market_id,
+            market_group,
+            market_area,
+            market_price,
+            market_addr,
+            market_img,
+            market_status
+        });
+
+        res.status(200).json({
+            message: "เพิ่มข้อมูลพื้นที่ตลาดสำเร็จ",
+            data: rows
+        });
+    } catch (error) {
+        console.error("Error add data in:", error);
+        res.status(500).json({ message: "เกิดข้อผิดพลาดในการเพิ่มข้อมูลพื้นที่ตลาด" });
+    }
+}
+
+const editMarket_Detail = async (req, res) => {
+    if (req.files && req.files['market_img']) {
+        req.body.market_img = req.files['market_img'][0].filename;
+    }
+
+    const sql = `
+    UPDATE market_table SET
+        market_group = :market_group,
+        market_area = :market_area,
+        market_price = :market_price,
+        market_addr = :market_addr,
+        market_img = :market_img,
+        market_status = :market_status
+    WHERE market_id = :market_id;
+    `;
+
+    try {
+        const [rows] = await promisePool.query(sql, {
+            market_id: req.params.market_id,
+            ...req.body
+        });
+
+        res.status(200).json({
+            message: "แก้ไขข้อมูลพื้นที่ตลาดสำเร็จ",
+            data: rows
+        });
+    } catch (error) {
+        console.error("Error edit data in:", error);
+        res.status(500).json({ message: "เกิดข้อผิดพลาดในการแก้ไขข้อมูลพื้นที่ตลาด" });
+    }
+}
+
+const delMarket_Detail = async (req, res) => {
+    const market_id = req.params.market_id;
+
+    const sql_check = `SELECT market_status, market_img FROM market_table WHERE market_id = :market_id;`;
+
+    try {
+        const [checkRows] = await promisePool.query(sql_check, { market_id });
+
+        if (checkRows.length === 0) {
+            return res.status(404).json({ message: "ไม่พบข้อมูลพื้นที่ตลาด" });
+        }
+
+        if (checkRows[0].market_status === '1') {
+            return res.status(400).json({ message: "ไม่สามารถลบข้อมูลล็อคตลาดนี้ได้เนื่องจากมีการเช่าอยู่" });
+        }
+
+        const sql_delete = `DELETE FROM market_table WHERE market_id = :market_id;`;
+        const [rows] = await promisePool.query(sql_delete, { market_id });
+
+        const marketImg = checkRows[0].market_img;
+        if (marketImg) {
+            const marketImgPath = path.join(__dirname, '../image/stall', marketImg);
+            if (fs.existsSync(marketImgPath)) {
+                fs.unlinkSync(marketImgPath);
+            }
+        }
+
+        res.status(200).json({
+            message: "ลบข้อมูลพื้นที่ตลาดสำเร็จ",
+            data: rows
+        });
+    } catch (error) {
+        console.error("Error delete data in:", error);
+        res.status(500).json({ message: "เกิดข้อผิดพลาดในการลบข้อมูลพื้นที่ตลาด" });
+    }
+}
+
+
+
+
 module.exports = {
     getAdmin,
     addAdmin,
@@ -640,5 +806,8 @@ module.exports = {
     editProductType,
     delProductType,
     getMarket_Summary,
-    getMarket_Detail
+    getMarket_Detail,
+    addMarket_Detail,
+    editMarket_Detail,
+    delMarket_Detail
 };

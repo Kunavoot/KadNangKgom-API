@@ -11,13 +11,18 @@ const storage = multer.diskStorage({
             cb(null, 'image/trader/');
         } else if (file.fieldname === 'trader_pic_product') {
             cb(null, 'image/product/');
+        } else if (file.fieldname === 'market_img') {
+            cb(null, 'image/stall/');
         } else {
             cb(null, 'image/');
         }
     },
     filename: (req, file, cb) => {
-        const id = req.params.trader_no || req.body.trader_no || req.body.trader_un || Date.now();
-        const prefix = file.fieldname === 'trader_pic_trader' ? 'trader' : 'product';
+        const id = req.params.market_id || req.params.trader_no || req.body.trader_no || req.body.trader_un || Date.now();
+        let prefix = 'image';
+        if (file.fieldname === 'trader_pic_trader') prefix = 'trader';
+        else if (file.fieldname === 'trader_pic_product') prefix = 'product';
+        else if (file.fieldname === 'market_img') prefix = 'stall';
         cb(null, `${prefix}_${id}${path.extname(file.originalname)}`);
     }
 });
@@ -27,6 +32,10 @@ const upload = multer({ storage: storage });
 const traderUpload = upload.fields([
     { name: 'trader_pic_trader', maxCount: 1 },
     { name: 'trader_pic_product', maxCount: 1 }
+]);
+
+const marketUpload = upload.fields([
+    { name: 'market_img', maxCount: 1 }
 ]);
 
 // จัดการข้อมูลผู้บริหาร
@@ -62,5 +71,9 @@ router.delete('/delProductType/:ptype_id', adminController.delProductType);
 // จัดการข้อมูลพื้นที่ตลาด
 router.get('/getMarket_Summary', adminController.getMarket_Summary);
 router.get('/getMarket_Detail/:group_id', adminController.getMarket_Detail);
+router.post('/addMarket_Detail', marketUpload, adminController.addMarket_Detail);
+router.put('/editMarket_Detail/:market_id', marketUpload, adminController.editMarket_Detail);
+router.delete('/delMarket_Detail/:market_id', adminController.delMarket_Detail);
+
 
 module.exports = router;
