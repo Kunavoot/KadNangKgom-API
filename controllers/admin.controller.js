@@ -827,6 +827,222 @@ const getAgreement_Summary = async (req, res) => {
     }
 }
 
+const getAgreement_Detail = async (req, res) => {
+    const group_id = req.query.group_id || req.body.group_id;
+    const agmt_status = req.query.agmt_status || req.body.agmt_status;
+    const agmt_start = req.query.agmt_start || req.body.agmt_start;
+    const agmt_end = req.query.agmt_end || req.body.agmt_end;
+
+    if (!group_id || !agmt_status || !agmt_start || !agmt_end) {
+        return res.status(400).json({ message: "กรุณาระบุข้อมูลให้ครบถ้วน (group_id, agmt_status, agmt_start, agmt_end)" });
+    }
+
+    const sql = `
+    SELECT 
+        m.*,
+        MAX(CASE WHEN a.agmt_market IS NOT NULL THEN '1' ELSE '0' END) AS market_rented
+    FROM market_table m
+    LEFT JOIN agreement_table a 
+        ON m.market_id = a.agmt_market
+        AND a.agmt_start <= :agmt_end 
+        AND a.agmt_end >= :agmt_start
+        AND (
+            (:agmt_status = '1' AND a.agmt_status IN ('1', '3')) OR
+            (:agmt_status = '2' AND a.agmt_status IN ('2', '3')) OR
+            (:agmt_status = '3' AND a.agmt_status IN ('1', '2', '3'))
+        )
+    WHERE m.market_group = :group_id
+    GROUP BY m.market_id
+    ORDER BY m.market_id ASC;
+    `;
+
+    try {
+        const [rows] = await promisePool.query(sql, { 
+            group_id, 
+            agmt_status, 
+            agmt_start, 
+            agmt_end 
+        });
+
+        res.status(200).json({
+            message: "ดึงข้อมูลรายละเอียดสัญญาเช่าสำเร็จ",
+            data: rows
+        });
+    } catch (error) {
+        console.error("Error fetching getAgreement_Detail:", error);
+        res.status(500).json({ message: "เกิดข้อผิดพลาดในการดึงข้อมูลรายละเอียดสัญญาเช่า" });
+    }
+}
+
+const addAgreement = async (req, res) => {
+    let { agmt_trader, agmt_admin, agmt_market, agmt_status, agmt_start, agmt_end } = req.body;
+
+    if (!agmt_trader || !agmt_admin || !agmt_market || !agmt_status || !agmt_start || !agmt_end) {
+        return res.status(400).json({ message: "กรุณาระบุข้อมูลให้ครบถ้วน" });
+    }
+
+    if (!/^\d+$/.test(agmt_trader)) {
+        return res.status(400).json({ message: "รหัสผู้ค้าต้องเป็นตัวเลขเท่านั้น" });
+    }
+
+    if (!/^\d+$/.test(agmt_admin)) {
+        return res.status(400).json({ message: "รหัสผู้บริหารต้องเป็นตัวเลขเท่านั้น" });
+    }
+
+    try {
+        const checkTraderSql = 'SELECT trader_no FROM trader_table WHERE trader_no = :agmt_trader';
+        const [traderRows] = await promisePool.query(checkTraderSql, { agmt_trader });
+        if (traderRows.length === 0) {
+            return res.status(400).json({ message: "ไม่พบข้อมูลผู้ค้าในระบบ" });
+        }
+
+        const checkAdminSql = 'SELECT admin_no FROM admin_table WHERE admin_no = :agmt_admin';
+        const [adminRows] = await promisePool.query(checkAdminSql, { agmt_admin });
+        if (adminRows.length === 0) {
+            return res.status(400).json({ message: "ไม่พบข้อมูลผู้บริหารในระบบ" });
+        }
+
+        const sql = `
+        INSERT INTO agreement_table (
+            agmt_trader,
+            agmt_admin,
+            agmt_market,
+            agmt_status,
+            agmt_start,
+            agmt_end
+        ) VALUES (
+            :agmt_trader,
+            :agmt_admin,
+            :agmt_market,
+            :agmt_status,
+            :agmt_start,
+            :agmt_end
+        );
+        `;
+
+        const updateMarketSql = `UPDATE market_table SET market_status = '1' WHERE market_id = :agmt_market`;
+        
+        let resultData = [];
+        
+        if (Array.isArray(agmt_market)) {
+            for (let market of agmt_market) {
+                const [rows] = await promisePool.query(sql, {
+                    agmt_trader,
+                    agmt_admin,
+                    agmt_market: market,
+                    agmt_status,
+                    agmt_start,
+                    agmt_end
+                });
+                await promisePool.query(updateMarketSql, { agmt_market: market });
+                resultData.push(rows);
+            }
+        } else {
+            const [rows] = await promisePool.query(sql, {
+                agmt_trader,
+                agmt_admin,
+                agmt_market,
+                agmt_status,
+                agmt_start,
+                agmt_end
+            });
+            await promisePool.query(updateMarketSql, { agmt_market });
+            resultData = rows;
+        }
+
+        res.status(200).json({
+            message: "เพิ่มข้อมูลสัญญาเช่าสำเร็จ",
+            data: resultData
+        });
+    } catch (error) {
+        console.error("Error addAgreement:", error);
+        res.status(500).json({ message: "เกิดข้อผิดพลาดในการเพิ่มข้อมูลสัญญาเช่า" });
+    }
+}
+
+const getAgreement_List = async (req, res) => {
+    const group_id = req.query.group_id || req.body.group_id;
+    const agmt_status = req.query.agmt_status || req.body.agmt_status;
+    const agmt_start = req.query.agmt_start || req.body.agmt_start;
+    const agmt_end = req.query.agmt_end || req.body.agmt_end;
+
+    if (!group_id || !agmt_status || !agmt_start || !agmt_end) {
+        return res.status(400).json({ message: "กรุณาระบุข้อมูลให้ครบถ้วน (group_id, agmt_status, agmt_start, agmt_end)" });
+    }
+
+    const sql = `
+    SELECT 
+        a.agmt_id,
+        a.agmt_market,
+        a.agmt_status,
+        DATE_FORMAT(a.agmt_start, '%Y-%m-%d') AS agmt_start,
+        DATE_FORMAT(a.agmt_end, '%Y-%m-%d') AS agmt_end,
+        t.trader_shop,
+        pt.ptype_name,
+        m.market_price
+    FROM agreement_table a
+    LEFT JOIN trader_table t ON a.agmt_trader = t.trader_no
+    LEFT JOIN market_table m ON a.agmt_market = m.market_id
+    LEFT JOIN product_type_table pt ON t.trader_ptype = pt.ptype_id
+    WHERE m.market_group = :group_id
+        AND a.agmt_start <= :agmt_end 
+        AND a.agmt_end >= :agmt_start
+        AND (
+            (:agmt_status = '1' AND a.agmt_status IN ('1', '3')) OR
+            (:agmt_status = '2' AND a.agmt_status IN ('2', '3')) OR
+            (:agmt_status = '3' AND a.agmt_status IN ('1', '2', '3'))
+        )
+    ORDER BY a.agmt_market, a.agmt_start ASC;
+    `;
+
+    try {
+        const [rows] = await promisePool.query(sql, { 
+            group_id, 
+            agmt_status, 
+            agmt_start, 
+            agmt_end 
+        });
+
+        res.status(200).json({
+            message: "ดึงข้อมูลรายการสัญญาเช่าสำเร็จ",
+            data: rows
+        });
+    } catch (error) {
+        console.error("Error fetching getAgreement_List:", error);
+        res.status(500).json({ message: "เกิดข้อผิดพลาดในการดึงข้อมูลรายการสัญญาเช่า" });
+    }
+}
+
+const delAgreement = async (req, res) => {
+    const agmt_id = req.query.agmt_id || req.body.agmt_id;
+    const agmt_market = req.query.agmt_market || req.body.agmt_market;
+
+    if (!agmt_id || !agmt_market) {
+        return res.status(400).json({ message: "กรุณาระบุข้อมูลให้ครบถ้วน" });
+    }
+
+    const sqlDelete = `DELETE FROM agreement_table WHERE agmt_id = :agmt_id`;
+    const sqlCheck = `SELECT COUNT(*) AS count FROM agreement_table WHERE agmt_market = :agmt_market`;
+    const sqlUpdateMarket = `UPDATE market_table SET market_status = '0' WHERE market_id = :agmt_market`;
+
+    try {
+        const [rows] = await promisePool.query(sqlDelete, { agmt_id });
+
+        const [checkRows] = await promisePool.query(sqlCheck, { agmt_market });
+        if (checkRows[0].count === 0) {
+            await promisePool.query(sqlUpdateMarket, { agmt_market });
+        }
+
+        res.status(200).json({
+            message: "ลบข้อมูลสัญญาเช่าสำเร็จ",
+            data: rows
+        });
+    } catch (error) {
+        console.error("Error deleting delAgreement:", error);
+        res.status(500).json({ message: "เกิดข้อผิดพลาดในการลบข้อมูลสัญญาเช่า" });
+    }
+}   
+
 
 
 module.exports = {
@@ -862,5 +1078,9 @@ module.exports = {
     editMarket_Detail,
     delMarket_Detail,
     // จัดการข้อมูลสัญญาเช่า
-    getAgreement_Summary
+    getAgreement_Summary,
+    getAgreement_Detail,
+    getAgreement_List,
+    addAgreement,
+    delAgreement
 };

@@ -77,6 +77,9 @@ router.delete('/delMarket_Detail/:market_id', adminController.delMarket_Detail);
 
 // จัดการข้อมูลสัญญาเช่า
 router.get('/getAgreement_Summary', adminController.getAgreement_Summary);
-
+router.get('/getAgreement_Detail', adminController.getAgreement_Detail);
+router.get('/getAgreement_List', adminController.getAgreement_List);
+router.post('/addAgreement', adminController.addAgreement);
+router.delete('/delAgreement', adminController.delAgreement);
 
 module.exports = router;
