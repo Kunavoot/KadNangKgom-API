@@ -75,5 +75,8 @@ router.post('/addMarket_Detail', marketUpload, adminController.addMarket_Detail)
 router.put('/editMarket_Detail/:market_id', marketUpload, adminController.editMarket_Detail);
 router.delete('/delMarket_Detail/:market_id', adminController.delMarket_Detail);
 
+// จัดการข้อมูลสัญญาเช่า
+router.get('/getAgreement_Summary', adminController.getAgreement_Summary);
+
 
 module.exports = router;

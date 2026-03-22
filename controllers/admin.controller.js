@@ -649,7 +649,7 @@ const addMarket_Detail = async (req, res) => {
     try {
         if (!market_id) {
             const groupStr = String(market_group).padStart(2, '0');
-            
+
             const sql_get_id = `
             SELECT 
                 LPAD(
@@ -667,7 +667,7 @@ const addMarket_Detail = async (req, res) => {
                     3, '0' 
                 ) AS next_id;
             `;
-            
+
             const [idRows] = await promisePool.query(sql_get_id, { market_group: groupStr });
             market_id = groupStr + idRows[0].next_id;
         }
@@ -782,32 +782,85 @@ const delMarket_Detail = async (req, res) => {
 }
 
 
+const getAgreement_Summary = async (req, res) => {
+    const filterDate = req.query.filterDate;
+
+    if (!filterDate) {
+        return res.status(400).json({ message: "กรุณาระบุวันที่เพื่อค้นหาข้อมูล" });
+    }
+
+    const sql = `
+    SELECT 
+        g.group_id,
+        g.group_name,
+        COUNT(m.market_id) AS total_stalls,
+        (COUNT(m.market_id) - SUM(IFNULL(rented.is_rented_sat, 0))) AS available_sat,
+        (COUNT(m.market_id) - SUM(IFNULL(rented.is_rented_sun, 0))) AS available_sun,
+        SUM(CASE WHEN m.market_id IS NOT NULL AND IFNULL(rented.is_rented_sat, 0) = 0 AND IFNULL(rented.is_rented_sun, 0) = 0 THEN 1 ELSE 0 END) AS absolute_available,
+        SUM(CASE WHEN m.market_id IS NOT NULL AND (IFNULL(rented.is_rented_sat, 0) = 1 OR IFNULL(rented.is_rented_sun, 0) = 1) THEN 1 ELSE 0 END) AS total_rented,
+        :filterDate AS filter_date
+    FROM group_table g
+    LEFT JOIN market_table m ON g.group_id = m.market_group
+    LEFT JOIN (
+        SELECT 
+            agmt_market,
+            MAX(CASE WHEN agmt_status IN ('1', '3') THEN 1 ELSE 0 END) AS is_rented_sat,
+            MAX(CASE WHEN agmt_status IN ('2', '3') THEN 1 ELSE 0 END) AS is_rented_sun
+        FROM agreement_table
+        WHERE :filterDate BETWEEN agmt_start AND agmt_end
+        GROUP BY agmt_market
+    ) rented ON m.market_id = rented.agmt_market
+    GROUP BY g.group_id, g.group_name
+    ORDER BY g.group_id ASC;
+    `;
+
+    try {
+        const [rows] = await promisePool.query(sql, { filterDate });
+
+        res.status(200).json({
+            message: "ดึงข้อมูลสรุปการเช่าสำเร็จ",
+            data: rows
+        });
+    } catch (error) {
+        console.error("Error fetching getAgreement_Summary:", error);
+        res.status(500).json({ message: "เกิดข้อผิดพลาดในการดึงข้อมูลสรุปการเช่า" });
+    }
+}
+
 
 
 module.exports = {
+    // จัดการข้อมูลผู้บริหาร
     getAdmin,
     addAdmin,
     editAdmin,
     delAdmin,
+    // จัดการข้อมูลผู้ค้า
     getTrader,
     addTrader,
     editTrader,
     delTrader,
+    // จัดการข้อมูลกลุ่ม
     getGroup,
     addGroup,
     editGroup,
     delGroup,
+    // จัดการข้อมูลประเภทสมาชิก
     getMemberType,
     addMemberType,
     editMemberType,
     delMemberType,
+    // จัดการข้อมูลประเภทสินค้า
     getProductType,
     addProductType,
     editProductType,
     delProductType,
+    // จัดการข้อมูลพื้นที่ตลาด
     getMarket_Summary,
     getMarket_Detail,
     addMarket_Detail,
     editMarket_Detail,
-    delMarket_Detail
+    delMarket_Detail,
+    // จัดการข้อมูลสัญญาเช่า
+    getAgreement_Summary
 };
