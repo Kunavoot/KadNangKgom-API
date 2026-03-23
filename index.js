@@ -9,6 +9,7 @@ app.use('/image', express.static(path.join(__dirname, 'image')));
 
 const systemRoutes = require('./routes/system.routes');
 const adminRoutes = require('./routes/admin.routes');
+const traderRoutes = require('./routes/trader.routes');
 
 // Middleware สำหรับ CORS
 app.use(cors());
@@ -25,6 +26,7 @@ app.get('/', (req, res) => {
 // นำเข้า Route
 app.use('/api/system', systemRoutes);
 app.use('/api/admin', adminRoutes);
+app.use('/api/trader', traderRoutes);
 
 const PORT = process.env.PORT || 3000;
 app.listen(PORT, () => {

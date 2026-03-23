@@ -3,6 +3,7 @@ const router = express.Router();
 const adminController = require('../controllers/admin.controller');
 const multer = require('multer');
 const path = require('path');
+const fs = require('fs');
 
 // Multer configuration for image uploads
 const storage = multer.diskStorage({
@@ -20,10 +21,37 @@ const storage = multer.diskStorage({
     filename: (req, file, cb) => {
         const id = req.params.market_id || req.params.trader_no || req.body.trader_no || req.body.trader_un || Date.now();
         let prefix = 'image';
-        if (file.fieldname === 'trader_pic_trader') prefix = 'trader';
-        else if (file.fieldname === 'trader_pic_product') prefix = 'product';
-        else if (file.fieldname === 'market_img') prefix = 'stall';
-        cb(null, `${prefix}_${id}${path.extname(file.originalname)}`);
+        let destFolder = 'image/';
+        
+        if (file.fieldname === 'trader_pic_trader') {
+            prefix = 'trader';
+            destFolder = 'image/trader/';
+        } else if (file.fieldname === 'trader_pic_product') {
+            prefix = 'product';
+            destFolder = 'image/product/';
+        } else if (file.fieldname === 'market_img') {
+            prefix = 'stall';
+            destFolder = 'image/stall/';
+        }
+        
+        const filenameBase = `${prefix}_${id}`;
+        
+        // Clear any old files with the same base name (but different extensions)
+        const dirPath = path.join(__dirname, '..', destFolder);
+        if (fs.existsSync(dirPath)) {
+            const files = fs.readdirSync(dirPath);
+            for (const f of files) {
+                if (f.startsWith(filenameBase + '.')) {
+                    try {
+                        fs.unlinkSync(path.join(dirPath, f));
+                    } catch (err) {
+                        console.error("Error deleting old image file:", err);
+                    }
+                }
+            }
+        }
+
+        cb(null, `${filenameBase}${path.extname(file.originalname)}`);
     }
 });
 
