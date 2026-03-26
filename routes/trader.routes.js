@@ -57,7 +57,13 @@ const traderUpload = upload.fields([
     { name: 'trader_pic_product', maxCount: 1 }
 ]);
 
+// แก้ไขข้อมูลผู้ค้า
 router.get('/getProfile', traderController.getProfile);
 router.put('/editProfile/:trader_no', traderUpload, traderController.editProfile);
+
+// ส่งข้อมูลยอดขาย
+router.get('/getSales', traderController.getSales);
+router.get('/getAgreement', traderController.getAgreement);
+router.post('/sendSales', traderController.sendSales);
 
 module.exports = router;

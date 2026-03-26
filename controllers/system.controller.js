@@ -102,9 +102,26 @@ const getProductType = async (req, res) => {
     }
 }
 
+const getGroup = async (req, res) => {
+    const sql = `SELECT * FROM group_table`;
+
+    try {
+        const [rows] = await promisePool.query(sql);
+
+        res.status(200).json({
+            message: "ดึงข้อมูลกลุ่มสำเร็จ",
+            data: rows
+        });
+    } catch (error) {
+        console.error("Error fetching data in:", error);
+        res.status(500).json({ message: "เกิดข้อผิดพลาดในการดึงข้อมูลกลุ่ม" });
+    }
+}
+
 module.exports = {
     checkLogin,
     getPrefix,
     getMemberType,
-    getProductType
+    getProductType,
+    getGroup
 };

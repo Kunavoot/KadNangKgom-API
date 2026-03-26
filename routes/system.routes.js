@@ -6,5 +6,6 @@ router.post('/login', systemController.checkLogin);
 router.get('/getPrefix', systemController.getPrefix);
 router.get('/getMemberType', systemController.getMemberType);
 router.get('/getProductType', systemController.getProductType);
+router.get('/getGroup', systemController.getGroup);
 
 module.exports = router;
