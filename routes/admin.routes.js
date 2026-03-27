@@ -109,5 +109,6 @@ router.get('/getAgreement_Detail', adminController.getAgreement_Detail);
 router.get('/getAgreement_List', adminController.getAgreement_List);
 router.post('/addAgreement', adminController.addAgreement);
 router.delete('/delAgreement', adminController.delAgreement);
+router.get('/getReportSale', adminController.getReportSale);
 
 module.exports = router;

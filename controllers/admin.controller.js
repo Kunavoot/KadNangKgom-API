@@ -171,7 +171,6 @@ const getTrader = async (req, res) => {
 }
 
 const addTrader = async (req, res) => {
-    // If files were uploaded, add the filenames to req.body
     if (req.files) {
         if (req.files['trader_pic_trader']) {
             req.body.trader_pic_trader = req.files['trader_pic_trader'][0].filename;
@@ -1043,6 +1042,91 @@ const delAgreement = async (req, res) => {
     }
 }   
 
+const getReportSale = async (req, res) => {
+    const { year, month, sell_day } = req.query;
+
+    if (!year || !month || !sell_day) {
+        return res.status(400).json({ message: "กรุณาระบุข้อมูลให้ครบถ้วน (year, month, sell_day)" });
+    }
+
+    try {
+        // หาเลขสัปดาห์ล่าสุดที่มีข้อมูลในเดือนและปีที่ระบุ
+        const sql_latest_week = `
+            SELECT IFNULL(MAX(WEEK(sale_date, 1)), 0) AS max_week
+            FROM sales_table
+            WHERE YEAR(sale_date) = :year AND MONTH(sale_date) = :month;
+        `;
+        const [weekRows] = await promisePool.query(sql_latest_week, { year, month });
+        const latest_week = weekRows[0].max_week;
+
+        const sellDayFilter = `
+            (:sell_day = '1' AND DAYOFWEEK(s.sale_date) = 7) OR
+            (:sell_day = '2' AND DAYOFWEEK(s.sale_date) = 1) OR
+            (:sell_day = '3')
+        `;
+
+        const sql_group = `
+        SELECT 
+            g.group_name, 
+            SUM(CASE WHEN YEAR(s.sale_date) = :year THEN s.sale_amount ELSE 0 END) AS year_amount,
+            SUM(CASE WHEN YEAR(s.sale_date) = :year AND MONTH(s.sale_date) = :month THEN s.sale_amount ELSE 0 END) AS month_amount,
+            SUM(CASE WHEN YEAR(s.sale_date) = :year AND MONTH(s.sale_date) = :month AND WEEK(s.sale_date, 1) = :latest_week THEN s.sale_amount ELSE 0 END) AS week_amount
+        FROM sales_table s
+        JOIN group_table g ON s.sale_group = g.group_id
+        WHERE (${sellDayFilter})
+        GROUP BY s.sale_group, g.group_name
+        ORDER BY month_amount DESC;
+        `;
+
+        const sql_ptype = `
+        SELECT 
+            pt.ptype_name, 
+            SUM(CASE WHEN YEAR(s.sale_date) = :year THEN s.sale_amount ELSE 0 END) AS year_amount,
+            SUM(CASE WHEN YEAR(s.sale_date) = :year AND MONTH(s.sale_date) = :month THEN s.sale_amount ELSE 0 END) AS month_amount,
+            SUM(CASE WHEN YEAR(s.sale_date) = :year AND MONTH(s.sale_date) = :month AND WEEK(s.sale_date, 1) = :latest_week THEN s.sale_amount ELSE 0 END) AS week_amount
+        FROM sales_table s
+        JOIN product_type_table pt ON s.sale_ptype = pt.ptype_id
+        WHERE (${sellDayFilter})
+        GROUP BY s.sale_ptype, pt.ptype_name
+        ORDER BY month_amount DESC;
+        `;
+
+        const sql_3shop = `
+        SELECT 
+            s.sale_shop, 
+            SUM(CASE WHEN YEAR(s.sale_date) = :year THEN s.sale_amount ELSE 0 END) AS year_amount,
+            SUM(CASE WHEN YEAR(s.sale_date) = :year AND MONTH(s.sale_date) = :month THEN s.sale_amount ELSE 0 END) AS month_amount,
+            SUM(CASE WHEN YEAR(s.sale_date) = :year AND MONTH(s.sale_date) = :month AND WEEK(s.sale_date, 1) = :latest_week THEN s.sale_amount ELSE 0 END) AS week_amount
+        FROM sales_table s
+        WHERE (${sellDayFilter})
+        GROUP BY s.sale_shop
+        ORDER BY month_amount DESC
+        LIMIT 3;
+        `;
+
+        const [data_group] = await promisePool.query(sql_group, { year, month, sell_day, latest_week });
+        const [data_ptype] = await promisePool.query(sql_ptype, { year, month, sell_day, latest_week });
+        const [data_3shop] = await promisePool.query(sql_3shop, { year, month, sell_day, latest_week });
+
+        res.status(200).json({
+            message: "ดึงข้อมูลรายงานการขายสำเร็จ",
+            data: {
+                data_group,
+                data_ptype,
+                data_3shop
+            },
+            date: {
+                year,
+                month,
+                sell_day,
+                latest_week
+            }
+        });
+    } catch (error) {
+        console.error("Error fetching getReportSale:", error);
+        res.status(500).json({ message: "เกิดข้อผิดพลาดในการดึงข้อมูลรายงานการขาย" });
+    }
+}
 
 
 module.exports = {
@@ -1082,5 +1166,6 @@ module.exports = {
     getAgreement_Detail,
     getAgreement_List,
     addAgreement,
-    delAgreement
+    delAgreement,
+    getReportSale
 };
