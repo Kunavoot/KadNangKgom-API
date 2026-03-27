@@ -254,10 +254,41 @@ const sendSales = async (req, res) => {
     }
 }
 
+const getSalesHistory = async (req, res) => {
+    const sql = `
+    SELECT 
+        ROW_NUMBER() OVER (ORDER BY s.sale_date DESC) AS row_num,
+        s.*,
+        DATE_FORMAT(s.sale_date, '%Y-%m-%d') AS sale_date,
+        pt.ptype_name,
+        g.group_name
+    FROM sales_table s
+    JOIN product_type_table pt ON s.sale_ptype = pt.ptype_id
+    JOIN group_table g ON s.sale_group = g.group_id
+    WHERE s.sale_trader = :sale_trader
+    ORDER BY s.sale_date DESC;
+    `;
+
+    try {
+        const [rows] = await promisePool.query(sql, {
+            sale_trader: req.query.sale_trader
+        });
+
+        res.status(200).json({
+            message: "ดึงข้อมูลประวัติการขายสำเร็จ",
+            data: rows
+        });
+    } catch (error) {
+        console.error("Error fetching data in:", error);
+        res.status(500).json({ message: "เกิดข้อผิดพลาดในการดึงข้อมูลประวัติการขาย" });
+    }
+}
+
 module.exports = {
     getProfile,
     editProfile,
     getSales,
     getAgreement,
-    sendSales
+    sendSales,
+    getSalesHistory
 };

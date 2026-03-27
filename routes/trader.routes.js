@@ -66,4 +66,7 @@ router.get('/getSales', traderController.getSales);
 router.get('/getAgreement', traderController.getAgreement);
 router.post('/sendSales', traderController.sendSales);
 
+// ประวัติการส่งยอดขาย
+router.get('/getSalesHistory', traderController.getSalesHistory);
+
 module.exports = router;
