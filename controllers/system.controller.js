@@ -118,10 +118,88 @@ const getGroup = async (req, res) => {
     }
 }
 
+const registerTrader = async (req, res) => {
+    const { trader_un } = req.body;
+
+    if (!trader_un) {
+        return res.status(400).json({ message: "กรุณาระบุชื่อผู้ใช้ (username)" });
+    }
+
+    const checkSql = `
+    SELECT username FROM (
+        SELECT admin_un AS username FROM admin_table
+        UNION ALL
+        SELECT trader_un AS username FROM trader_table
+    ) AS users
+    WHERE username = :trader_un
+    `;
+
+    try {
+        const [existing] = await promisePool.query(checkSql, { trader_un });
+        
+        if (existing.length > 0) {
+            return res.status(400).json({ message: "ชื่อผู้ใช้นี้ถูกใช้งานแล้ว กรุณาตั้งชื่อผู้ใช้อื่น" });
+        }
+
+        const sql = `
+        INSERT INTO trader_table (
+            trader_mtype,
+            trader_ptype,
+            trader_pname,
+            trader_name,
+            trader_sname,
+            trader_tel,
+            trader_shop,
+            trader_product,
+            trader_addr_product,
+            trader_addr,
+            trader_business,
+            trader_fsale,
+            trader_car,
+            trader_facebook,
+            trader_line,
+            trader_un,
+            trader_pw,
+            trader_date
+        ) VALUES (
+            1,
+            :trader_ptype,
+            :trader_pname,
+            :trader_name,
+            :trader_sname,
+            :trader_tel,
+            :trader_shop,
+            :trader_product,
+            :trader_addr_product,
+            :trader_addr,
+            :trader_business,
+            :trader_fsale,
+            :trader_car,
+            :trader_facebook,
+            :trader_line,
+            :trader_un,
+            :trader_pw,
+            CURDATE()
+        );
+        `;
+
+        const [rows] = await promisePool.query(sql, req.body);
+
+        res.status(200).json({
+            message: "สมัครสมาชิกสำเร็จ",
+            data: rows
+        });
+    } catch (error) {
+        console.error("Error registering trader:", error);
+        res.status(500).json({ message: "เกิดข้อผิดพลาดในการสมัครสมาชิก" });
+    }
+}
+
 module.exports = {
     checkLogin,
     getPrefix,
     getMemberType,
     getProductType,
-    getGroup
+    getGroup,
+    registerTrader
 };
