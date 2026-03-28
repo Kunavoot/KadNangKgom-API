@@ -1068,26 +1068,24 @@ const getReportSale = async (req, res) => {
         const sql_group = `
         SELECT 
             g.group_name, 
-            SUM(CASE WHEN YEAR(s.sale_date) = :year THEN s.sale_amount ELSE 0 END) AS year_amount,
-            SUM(CASE WHEN YEAR(s.sale_date) = :year AND MONTH(s.sale_date) = :month THEN s.sale_amount ELSE 0 END) AS month_amount,
-            SUM(CASE WHEN YEAR(s.sale_date) = :year AND MONTH(s.sale_date) = :month AND WEEK(s.sale_date, 1) = :latest_week THEN s.sale_amount ELSE 0 END) AS week_amount
-        FROM sales_table s
-        JOIN group_table g ON s.sale_group = g.group_id
-        WHERE (${sellDayFilter})
-        GROUP BY s.sale_group, g.group_name
+            SUM(CASE WHEN YEAR(s.sale_date) = :year AND (${sellDayFilter}) THEN s.sale_amount ELSE 0 END) AS year_amount,
+            SUM(CASE WHEN YEAR(s.sale_date) = :year AND MONTH(s.sale_date) = :month AND (${sellDayFilter}) THEN s.sale_amount ELSE 0 END) AS month_amount,
+            SUM(CASE WHEN YEAR(s.sale_date) = :year AND MONTH(s.sale_date) = :month AND WEEK(s.sale_date, 1) = :latest_week AND (${sellDayFilter}) THEN s.sale_amount ELSE 0 END) AS week_amount
+        FROM group_table g
+        LEFT JOIN sales_table s ON g.group_id = s.sale_group
+        GROUP BY g.group_id, g.group_name
         ORDER BY month_amount DESC;
         `;
 
         const sql_ptype = `
         SELECT 
             pt.ptype_name, 
-            SUM(CASE WHEN YEAR(s.sale_date) = :year THEN s.sale_amount ELSE 0 END) AS year_amount,
-            SUM(CASE WHEN YEAR(s.sale_date) = :year AND MONTH(s.sale_date) = :month THEN s.sale_amount ELSE 0 END) AS month_amount,
-            SUM(CASE WHEN YEAR(s.sale_date) = :year AND MONTH(s.sale_date) = :month AND WEEK(s.sale_date, 1) = :latest_week THEN s.sale_amount ELSE 0 END) AS week_amount
-        FROM sales_table s
-        JOIN product_type_table pt ON s.sale_ptype = pt.ptype_id
-        WHERE (${sellDayFilter})
-        GROUP BY s.sale_ptype, pt.ptype_name
+            SUM(CASE WHEN YEAR(s.sale_date) = :year AND (${sellDayFilter}) THEN s.sale_amount ELSE 0 END) AS year_amount,
+            SUM(CASE WHEN YEAR(s.sale_date) = :year AND MONTH(s.sale_date) = :month AND (${sellDayFilter}) THEN s.sale_amount ELSE 0 END) AS month_amount,
+            SUM(CASE WHEN YEAR(s.sale_date) = :year AND MONTH(s.sale_date) = :month AND WEEK(s.sale_date, 1) = :latest_week AND (${sellDayFilter}) THEN s.sale_amount ELSE 0 END) AS week_amount
+        FROM product_type_table pt
+        LEFT JOIN sales_table s ON pt.ptype_id = s.sale_ptype
+        GROUP BY pt.ptype_id, pt.ptype_name
         ORDER BY month_amount DESC;
         `;
 
@@ -1167,5 +1165,6 @@ module.exports = {
     getAgreement_List,
     addAgreement,
     delAgreement,
+    // จัดการข้อมูลรายงานยอดขาย
     getReportSale
 };
