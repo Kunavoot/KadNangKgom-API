@@ -34,7 +34,12 @@ const storage = multer.diskStorage({
             destFolder = 'image/stall/';
         }
         
-        const filenameBase = `${prefix}_${id}`;
+        let filenameBase = `${prefix}_${id}`;
+        
+        if (file.fieldname === 'map_image') {
+            filenameBase = 'map_kadnangkgom';
+            destFolder = 'image/';
+        }
         
         // Clear any old files with the same base name (but different extensions)
         const dirPath = path.join(__dirname, '..', destFolder);
@@ -65,6 +70,8 @@ const traderUpload = upload.fields([
 const marketUpload = upload.fields([
     { name: 'market_img', maxCount: 1 }
 ]);
+
+const mapUpload = upload.single('map_image');
 
 // จัดการข้อมูลผู้บริหาร
 router.get('/getAdmin', adminController.getAdmin);
@@ -110,5 +117,10 @@ router.get('/getAgreement_List', adminController.getAgreement_List);
 router.post('/addAgreement', adminController.addAgreement);
 router.delete('/delAgreement', adminController.delAgreement);
 router.get('/getReportSale', adminController.getReportSale);
+
+// จัดการแผนที่ตลาด
+router.get('/getReportMap', adminController.getReportMap);
+router.get('/getMapImage', adminController.getMapImage);
+router.post('/uploadMapImage', mapUpload, adminController.uploadMapImage);
 
 module.exports = router;

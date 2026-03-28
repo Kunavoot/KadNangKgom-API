@@ -1160,6 +1160,93 @@ const getReportSale = async (req, res) => {
     }
 }
 
+const getReportMap = async (req, res) => {
+    try {
+        const { date, sell_day } = req.query;
+
+        if (!date || !sell_day) {
+            return res.status(400).json({ message: "กรุณาระบุข้อมูลให้ครบถ้วน (date, sell_day)" });
+        }
+
+        const sql_report_map = `
+        SELECT 
+            m.market_id,
+            g.group_id,
+            g.group_name,
+            CASE WHEN a.agmt_id IS NOT NULL THEN 1 ELSE 0 END AS market_status,
+            IFNULL(t.trader_shop, '-') AS trader_shop,
+            IFNULL(pt.ptype_name, '-') AS ptype_name,
+            IFNULL(a.agmt_id, '-') AS agmt_id
+        FROM group_table g
+        LEFT JOIN market_table m ON g.group_id = m.market_group
+        LEFT JOIN agreement_table a ON m.market_id = a.agmt_market
+            AND :date BETWEEN a.agmt_start AND a.agmt_end
+            AND (
+                (:sell_day = '1' AND a.agmt_status IN ('1', '3')) OR
+                (:sell_day = '2' AND a.agmt_status IN ('2', '3'))
+            )
+        LEFT JOIN trader_table t ON a.agmt_trader = t.trader_no
+        LEFT JOIN product_type_table pt ON t.trader_ptype = pt.ptype_id
+        ORDER BY g.group_id ASC, m.market_id ASC;
+        `;
+        
+        const [raw_data] = await promisePool.query(sql_report_map, { date, sell_day });
+
+        const data = raw_data.reduce((acc, current) => {
+            let groupObj = acc.find(g => g.group === current.group_name);
+            if (!groupObj) {
+                groupObj = { group: current.group_name, stall: [] };
+                acc.push(groupObj);
+            }
+
+            if (current.market_id) {
+                const isZero = current.market_status === 0;
+                groupObj.stall.push({
+                    stall_id: current.market_id,
+                    stall_group: current.group_id,
+                    stall_status: current.market_status,
+                    stall_shop: isZero ? '-' : current.trader_shop,
+                    stall_ptype: isZero ? '-' : current.ptype_name,
+                    stall_agmt: isZero ? '-' : current.agmt_id
+                });
+            }
+            return acc;
+        }, []);
+
+        res.status(200).json({ message: "ดึงข้อมูลรายงานแผนที่สำเร็จ", data });
+    } catch (error) {
+        console.error("Error fetching getReportMap:", error);
+        res.status(500).json({ message: "เกิดข้อผิดพลาดในการดึงข้อมูลรายงานแผนที่" });
+    }
+}
+
+const getMapImage = async (req, res) => {
+    try {
+        const dirPath = path.join(__dirname, '../image');
+        const files = fs.readdirSync(dirPath);
+        const mapFile = files.find(f => f.startsWith('map_kadnangkgom.'));
+        if (mapFile) {
+            res.status(200).json({ message: "ดึงข้อมูลไฟล์แผนที่สำเร็จ", filename: mapFile });
+        } else {
+            res.status(404).json({ message: "ไม่พบข้อมูลไฟล์แผนที่" });
+        }
+    } catch (error) {
+        console.error("Error finding map image:", error);
+        res.status(500).json({ message: "เกิดข้อผิดพลาดในการดึงข้อมูลไฟล์แผนที่" });
+    }
+}
+
+const uploadMapImage = async (req, res) => {
+    try {
+        if (!req.file) {
+            return res.status(400).json({ message: "กรุณาแนบไฟล์รูปภาพ" });
+        }
+        res.status(200).json({ message: "อัพโหลดไฟล์แผนที่สำเร็จ", filename: req.file.filename });
+    } catch (error) {
+        res.status(500).json({ message: "เกิดข้อผิดพลาดในการอัพโหลดไฟล์แผนที่" });
+    }
+}
+
 
 module.exports = {
     // จัดการข้อมูลผู้บริหาร
@@ -1200,5 +1287,9 @@ module.exports = {
     addAgreement,
     delAgreement,
     // จัดการข้อมูลรายงานยอดขาย
-    getReportSale
+    getReportSale,
+    // จัดการแผนที่ตลาด
+    getReportMap,
+    getMapImage,
+    uploadMapImage
 };
