@@ -146,7 +146,7 @@ const delAdmin = async (req, res) => {
 const getTrader = async (req, res) => {
     const sql = `
     SELECT t.*,
-        LPAD(t.trader_no, 8, '0') AS trader_no,
+        LPAD(t.trader_no, 6, '0') AS trader_no,
         DATE_FORMAT(t.trader_business, '%Y-%m-%d') AS trader_business,
         DATE_FORMAT(t.trader_date, '%Y-%m-%d') AS trader_date,
         mt.memtype_name AS trader_mtype_name,
