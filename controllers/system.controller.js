@@ -1,7 +1,6 @@
 const promisePool = require('../config/db.js');
 
 const checkLogin = async (req, res) => {
-    // console.log("Request Query:", req.query);
     const username = req.query?.username;
     const password = req.query?.password;
 
