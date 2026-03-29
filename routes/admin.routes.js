@@ -8,15 +8,25 @@ const fs = require('fs');
 // Multer configuration for image uploads
 const storage = multer.diskStorage({
     destination: (req, file, cb) => {
+        let dest = 'image/';
         if (file.fieldname === 'trader_pic_trader') {
-            cb(null, 'image/trader/');
+            dest = 'image/trader/';
         } else if (file.fieldname === 'trader_pic_product') {
-            cb(null, 'image/product/');
+            dest = 'image/product/';
         } else if (file.fieldname === 'market_img') {
-            cb(null, 'image/stall/');
-        } else {
-            cb(null, 'image/');
+            dest = 'image/stall/';
+        } else if (file.fieldname === 'map_image') {
+            dest = 'image/';
         }
+
+        const absolutePath = path.join(__dirname, '..', dest);
+
+        // ตรวจสอบและสร้างโฟลเดอร์ถ้าไม่มีอยู่
+        if (!fs.existsSync(absolutePath)) {
+            fs.mkdirSync(absolutePath, { recursive: true });
+        }
+
+        cb(null, absolutePath);
     },
     filename: (req, file, cb) => {
         const id = req.params.market_id || req.params.trader_no || req.body.trader_no || req.body.trader_un || Date.now();

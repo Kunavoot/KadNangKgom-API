@@ -28,6 +28,18 @@ app.use('/api/system', systemRoutes);
 app.use('/api/admin', adminRoutes);
 app.use('/api/trader', traderRoutes);
 
+// Global Error Handler สำหรับดักจับ Error ในระบบ
+app.use((err, req, res, next) => {
+    console.error("=== Server Error ===");
+    console.error(err.stack); // แสดง Stack Trace ใน Console
+    console.error("====================");
+
+    res.status(500).json({
+        message: "เกิดข้อผิดพลาดภายในเซิร์ฟเวอร์",
+        error: process.env.NODE_ENV === 'development' ? err.message : undefined
+    });
+});
+
 const PORT = process.env.PORT || 3000;
 app.listen(PORT, () => {
     console.log(`Server is running on port ${PORT}`);
