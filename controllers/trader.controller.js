@@ -183,7 +183,7 @@ const sendSales = async (req, res) => {
         });
 
         if (rows.length > 0) {
-            return res.status(400).json({ message: "วันที่ส่งยอดขายมากว่าหรือน้อยกว่าที่กำหนด" });
+            return res.status(400).json({ message: "วันที่ส่งยอดขายมากกว่าหรือน้อยกว่าที่กำหนด" });
         }
     } catch (error) {
         console.error("Error validating data in:", error);
@@ -202,7 +202,7 @@ const sendSales = async (req, res) => {
             return res.status(400).json({ message: "ต้องส่งข้อมูลยอดขายในวันอาทิตย์เท่านั้น" });
         }
     } else if (sell_day === '3') {
-        if (dayOfWeek !== 0 || dayOfWeek !== 6) {
+        if (dayOfWeek !== 0 && dayOfWeek !== 6) {
             return res.status(400).json({ message: "ต้องส่งข้อมูลยอดขายในวันอาทิตย์หรือวันเสาร์เท่านั้น" });
         }
     }
