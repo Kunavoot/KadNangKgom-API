@@ -41,7 +41,6 @@ const storage = multer.diskStorage({
             destFolder = 'image/';
         }
         
-        // Clear any old files with the same base name (but different extensions)
         const dirPath = path.join(__dirname, '..', destFolder);
         if (fs.existsSync(dirPath)) {
             const files = fs.readdirSync(dirPath);
