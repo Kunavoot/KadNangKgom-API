@@ -1235,7 +1235,6 @@ const getReportMap = async (req, res) => {
                     stall_id: current.market_id,
                     stall_group: current.group_id,
                     stall_status: current.market_status,
-                    stall_zone: current.group_zone,
                     stall_shop: isZero ? '-' : current.trader_shop,
                     stall_ptype: isZero ? '-' : current.ptype_name,
                     stall_agmt: isZero ? '-' : current.agmt_id
