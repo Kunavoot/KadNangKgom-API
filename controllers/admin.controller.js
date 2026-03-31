@@ -1223,9 +1223,9 @@ const getReportMap = async (req, res) => {
         const [raw_data] = await promisePool.query(sql_report_map, { date, sell_day });
 
         const data = raw_data.reduce((acc, current) => {
-            let groupObj = acc.find(g => g.group === current.group_name);
+            let groupObj = acc.find(g => g.group.group_name === current.group_name);
             if (!groupObj) {
-                groupObj = { group: [current.group_name, current.group_zone], stall: [] };
+                groupObj = { group: {group_name: current.group_name, group_zone: current.group_zone}, stall: [] };
                 acc.push(groupObj);
             }
 
