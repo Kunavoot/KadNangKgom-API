@@ -1202,6 +1202,7 @@ const getReportMap = async (req, res) => {
             m.market_id,
             g.group_id,
             g.group_name,
+            g.group_zone,
             CASE WHEN a.agmt_id IS NOT NULL THEN 1 ELSE 0 END AS market_status,
             IFNULL(t.trader_shop, '-') AS trader_shop,
             IFNULL(pt.ptype_name, '-') AS ptype_name,
@@ -1234,6 +1235,7 @@ const getReportMap = async (req, res) => {
                     stall_id: current.market_id,
                     stall_group: current.group_id,
                     stall_status: current.market_status,
+                    stall_zone: current.group_zone,
                     stall_shop: isZero ? '-' : current.trader_shop,
                     stall_ptype: isZero ? '-' : current.ptype_name,
                     stall_agmt: isZero ? '-' : current.agmt_id
