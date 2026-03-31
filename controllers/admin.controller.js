@@ -180,6 +180,32 @@ const addTrader = async (req, res) => {
         }
     }
 
+    const sql_check = `
+    SELECT * FROM (
+        SELECT 
+            admin_un AS username
+        FROM admin_table
+
+        UNION ALL
+
+        SELECT 
+            trader_un AS username
+        FROM trader_table
+    ) AS users
+    WHERE username = :username;
+    `;
+
+    try {
+        const [checkRows] = await promisePool.query(sql_check, { username: req.body.trader_un });
+
+        if (checkRows.length > 0) {
+            return res.status(400).json({ message: "ชื่อผู้ใช้ซ้ำ" });
+        }
+    } catch (error) {
+        console.error("Error add data in:", error);
+        return res.status(500).json({ message: "เกิดข้อผิดพลาดในการเพิ่มข้อมูลผู้ค้า" });
+    }
+
     const sql = `
     INSERT INTO trader_table (
         trader_mtype,
@@ -361,9 +387,11 @@ const addGroup = async (req, res) => {
     const sql = `
     INSERT INTO group_table (
         group_name,
+        group_zone,
         group_detail
     ) VALUES (
         :group_name,
+        :group_zone,
         :group_detail
     );
     `;
@@ -385,6 +413,7 @@ const editGroup = async (req, res) => {
     const sql = `
     UPDATE group_table SET
         group_name = :group_name,
+        group_zone = :group_zone,
         group_detail = :group_detail
     WHERE group_id = :group_id;
     `;

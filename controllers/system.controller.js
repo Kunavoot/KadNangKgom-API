@@ -11,6 +11,7 @@ const checkLogin = async (req, res) => {
     const sql = `
     SELECT * FROM (
         SELECT 
+            LPAD(admin_no, 6, '0') AS id,
             admin_un AS username,
             admin_pw AS password,
     		admin_name AS name,
@@ -21,6 +22,7 @@ const checkLogin = async (req, res) => {
         UNION ALL
 
         SELECT 
+            LPAD(trader_no, 6, '0') AS id,
             trader_un AS username,
             trader_pw AS password,
     		trader_name AS name,
@@ -41,6 +43,7 @@ const checkLogin = async (req, res) => {
         res.status(200).json({
             message: "เข้าสู่ระบบสำเร็จ",
             data: {
+                id: rows[0].id,
                 username: rows[0].username,
                 name: rows[0].name,
                 fullname: rows[0].fullname,
