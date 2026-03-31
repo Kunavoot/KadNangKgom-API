@@ -1225,7 +1225,7 @@ const getReportMap = async (req, res) => {
         const data = raw_data.reduce((acc, current) => {
             let groupObj = acc.find(g => g.group === current.group_name);
             if (!groupObj) {
-                groupObj = { group: current.group_name, stall: [] };
+                groupObj = { group: [current.group_name, current.group_zone], stall: [] };
                 acc.push(groupObj);
             }
 
