@@ -1189,6 +1189,94 @@ const getReportSale = async (req, res) => {
     }
 }
 
+const getReport3Shop = async (req, res) => {
+    const { year, month, sell_day } = req.query;
+
+    if (!year || !month || !sell_day) {
+        return res.status(400).json({ message: "กรุณาระบุข้อมูลให้ครบถ้วน (year, month, sell_day)" });
+    }
+
+    try {
+        // หาเลขสัปดาห์ล่าสุดที่มีข้อมูลในเดือนและปีที่ระบุ
+        const sql_latest_week = `
+            SELECT IFNULL(MAX(WEEK(sale_date, 1)), 0) AS max_week
+            FROM sales_table
+            WHERE YEAR(sale_date) = :year AND MONTH(sale_date) = :month;
+        `;
+        const [weekRows] = await promisePool.query(sql_latest_week, { year, month });
+        const latest_week = weekRows[0].max_week;
+
+        const sellDayFilter = `
+            (:sell_day = '1' AND DAYOFWEEK(s.sale_date) = 7) OR
+            (:sell_day = '2' AND DAYOFWEEK(s.sale_date) = 1) OR
+            (:sell_day = '3')
+        `;
+
+        const sql_3shop = `
+        WITH RECURSIVE rank_slots AS (
+            SELECT 1 AS shop_rank UNION ALL SELECT 2 UNION ALL SELECT 3
+        ),
+        group_scaffold AS (
+            SELECT g.group_id, g.group_name, rs.shop_rank
+            FROM group_table g
+            CROSS JOIN rank_slots rs
+        ),
+        ranked_sales AS (
+            SELECT 
+                s.sale_group,
+                s.sale_shop, 
+                SUM(CASE WHEN YEAR(s.sale_date) = :year AND (${sellDayFilter}) THEN s.sale_amount ELSE 0 END) AS year_amount,
+                SUM(CASE WHEN YEAR(s.sale_date) = :year AND MONTH(s.sale_date) = :month AND (${sellDayFilter}) THEN s.sale_amount ELSE 0 END) AS month_amount,
+                SUM(CASE WHEN YEAR(s.sale_date) = :year AND MONTH(s.sale_date) = :month AND WEEK(s.sale_date, 1) = :latest_week AND (${sellDayFilter}) THEN s.sale_amount ELSE 0 END) AS week_amount,
+                ROW_NUMBER() OVER(PARTITION BY s.sale_group ORDER BY SUM(CASE WHEN YEAR(s.sale_date) = :year AND MONTH(s.sale_date) = :month AND (${sellDayFilter}) THEN s.sale_amount ELSE 0 END) DESC) AS shop_rank
+            FROM sales_table s
+            WHERE (${sellDayFilter})
+            GROUP BY s.sale_group, s.sale_shop
+        )
+        SELECT 
+            gs.group_name,
+            IFNULL(rs.sale_shop, '-') AS sale_shop,
+            IFNULL(rs.year_amount, 0) AS year_amount,
+            IFNULL(rs.month_amount, 0) AS month_amount,
+            IFNULL(rs.week_amount, 0) AS week_amount
+        FROM group_scaffold gs
+        LEFT JOIN ranked_sales rs ON gs.group_id = rs.sale_group AND gs.shop_rank = rs.shop_rank
+        ORDER BY gs.group_id ASC, gs.shop_rank ASC;
+        `;
+
+        const [raw_data_3shop] = await promisePool.query(sql_3shop, { year, month, sell_day, latest_week });
+
+        const data_3shop = raw_data_3shop.reduce((acc, current) => {
+            let group = acc.find(g => g.group === current.group_name);
+            if (!group) {
+                group = { group: current.group_name, shops: [] };
+                acc.push(group);
+            }
+            group.shops.push({
+                shop_name: current.sale_shop,
+                week_amount: current.week_amount,
+                month_amount: current.month_amount,
+                year_amount: current.year_amount
+            });
+            return acc;
+        }, []);
+
+        res.status(200).json({
+            message: "ดึงข้อมูลยอดขาย 3 อันดับสำเร็จ",
+            data: data_3shop,
+            input: {
+                year,
+                month,
+                sell_day,
+                latest_week
+            }
+        });
+    } catch (error) {
+        console.error("Error fetching getReport3Shop:", error);
+        res.status(500).json({ message: "เกิดข้อผิดพลาดในการดึงข้อมูลยอดขาย 3 อันดับ" });
+    }
+}
+
 const getReportMap = async (req, res) => {
     try {
         const { date, sell_day } = req.query;
@@ -1318,6 +1406,7 @@ module.exports = {
     delAgreement,
     // จัดการข้อมูลรายงานยอดขาย
     getReportSale,
+    getReport3Shop,
     // จัดการแผนที่ตลาด
     getReportMap,
     getMapImage,

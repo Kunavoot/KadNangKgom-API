@@ -126,6 +126,7 @@ router.get('/getAgreement_List', adminController.getAgreement_List);
 router.post('/addAgreement', adminController.addAgreement);
 router.delete('/delAgreement', adminController.delAgreement);
 router.get('/getReportSale', adminController.getReportSale);
+router.get('/getReport3Shop', adminController.getReport3Shop);
 
 // จัดการแผนที่ตลาด
 router.get('/getReportMap', adminController.getReportMap);
