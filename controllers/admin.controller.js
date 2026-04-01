@@ -1072,115 +1072,92 @@ const delAgreement = async (req, res) => {
 }   
 
 const getReportSale = async (req, res) => {
-    const { year, month, sell_day } = req.query;
+    const { report_type, sell_day, start_date, end_date } = req.query;
 
-    if (!year || !month || !sell_day) {
-        return res.status(400).json({ message: "กรุณาระบุข้อมูลให้ครบถ้วน (year, month, sell_day)" });
+    if (!report_type || !sell_day || !start_date || !end_date) {
+        return res.status(400).json({ message: "กรุณาระบุข้อมูลให้ครบถ้วน (report_type, sell_day, start_date, end_date)" });
     }
 
     try {
-        // หาเลขสัปดาห์ล่าสุดที่มีข้อมูลในเดือนและปีที่ระบุ
-        const sql_latest_week = `
-            SELECT IFNULL(MAX(WEEK(sale_date, 1)), 0) AS max_week
-            FROM sales_table
-            WHERE YEAR(sale_date) = :year AND MONTH(sale_date) = :month;
-        `;
-        const [weekRows] = await promisePool.query(sql_latest_week, { year, month });
-        const latest_week = weekRows[0].max_week;
+        let sellDayFilter = '';
+        if (sell_day === '1') {
+            sellDayFilter = 'AND DAYOFWEEK(s.sale_date) = 7';
+        } else if (sell_day === '2') {
+            sellDayFilter = 'AND DAYOFWEEK(s.sale_date) = 1';
+        } else if (sell_day === '3') {
+            sellDayFilter = 'AND DAYOFWEEK(s.sale_date) IN (1, 7)';
+        }
 
-        const sellDayFilter = `
-            (:sell_day = '1' AND DAYOFWEEK(s.sale_date) = 7) OR
-            (:sell_day = '2' AND DAYOFWEEK(s.sale_date) = 1) OR
-            (:sell_day = '3')
-        `;
+        let periodSql = '';
+        let periodLabelSql = '';
+        if (report_type === 'day') {
+            periodSql = "DATE(s.sale_date)";
+            periodLabelSql = "DATE_FORMAT(s.sale_date, '%Y-%m-%d')";
+        } else if (report_type === 'week') {
+            periodSql = "YEARWEEK(s.sale_date, 1)";
+            periodLabelSql = "CONCAT(DATE_FORMAT(MIN(s.sale_date), '%Y-%m-%d'), ' - ', DATE_FORMAT(MAX(s.sale_date), '%Y-%m-%d'))";
+        } else if (report_type === 'month') {
+            periodSql = "DATE_FORMAT(s.sale_date, '%Y-%m')";
+            periodLabelSql = "DATE_FORMAT(s.sale_date, '%Y-%m')";
+        } else if (report_type === 'year') {
+            periodSql = "YEAR(s.sale_date)";
+            periodLabelSql = "CAST(YEAR(s.sale_date) AS CHAR)";
+        } else {
+            return res.status(400).json({ message: "ข้อมูล report_type ไม่ถูกต้อง" });
+        }
 
         const sql_group = `
         SELECT 
+            ${periodLabelSql} AS period,
             g.group_name AS name, 
-            SUM(CASE WHEN YEAR(s.sale_date) = :year AND (${sellDayFilter}) THEN s.sale_amount ELSE 0 END) AS year_amount,
-            SUM(CASE WHEN YEAR(s.sale_date) = :year AND MONTH(s.sale_date) = :month AND (${sellDayFilter}) THEN s.sale_amount ELSE 0 END) AS month_amount,
-            SUM(CASE WHEN YEAR(s.sale_date) = :year AND MONTH(s.sale_date) = :month AND WEEK(s.sale_date, 1) = :latest_week AND (${sellDayFilter}) THEN s.sale_amount ELSE 0 END) AS week_amount
+            SUM(s.sale_amount) AS amount
         FROM group_table g
         LEFT JOIN sales_table s ON g.group_id = s.sale_group
-        GROUP BY g.group_id, g.group_name
-        ORDER BY month_amount DESC, g.group_id ASC;
+        WHERE s.sale_date BETWEEN :start_date AND :end_date ${sellDayFilter}
+        GROUP BY ${periodSql}, g.group_id, g.group_name
+        ORDER BY period ASC, amount DESC;
         `;
 
         const sql_ptype = `
         SELECT 
+            ${periodLabelSql} AS period,
             pt.ptype_name AS name, 
-            SUM(CASE WHEN YEAR(s.sale_date) = :year AND (${sellDayFilter}) THEN s.sale_amount ELSE 0 END) AS year_amount,
-            SUM(CASE WHEN YEAR(s.sale_date) = :year AND MONTH(s.sale_date) = :month AND (${sellDayFilter}) THEN s.sale_amount ELSE 0 END) AS month_amount,
-            SUM(CASE WHEN YEAR(s.sale_date) = :year AND MONTH(s.sale_date) = :month AND WEEK(s.sale_date, 1) = :latest_week AND (${sellDayFilter}) THEN s.sale_amount ELSE 0 END) AS week_amount
+            SUM(s.sale_amount) AS amount
         FROM product_type_table pt
         LEFT JOIN sales_table s ON pt.ptype_id = s.sale_ptype
-        GROUP BY pt.ptype_id, pt.ptype_name
-        ORDER BY month_amount DESC, pt.ptype_id ASC;
+        WHERE s.sale_date BETWEEN :start_date AND :end_date ${sellDayFilter}
+        GROUP BY ${periodSql}, pt.ptype_id, pt.ptype_name
+        ORDER BY period ASC, amount DESC;
         `;
 
-        const sql_3shop = `
-        WITH RECURSIVE rank_slots AS (
-            SELECT 1 AS shop_rank UNION ALL SELECT 2 UNION ALL SELECT 3
-        ),
-        group_scaffold AS (
-            SELECT g.group_id, g.group_name, rs.shop_rank
-            FROM group_table g
-            CROSS JOIN rank_slots rs
-        ),
-        ranked_sales AS (
-            SELECT 
-                s.sale_group,
-                s.sale_shop, 
-                SUM(CASE WHEN YEAR(s.sale_date) = :year AND (${sellDayFilter}) THEN s.sale_amount ELSE 0 END) AS year_amount,
-                SUM(CASE WHEN YEAR(s.sale_date) = :year AND MONTH(s.sale_date) = :month AND (${sellDayFilter}) THEN s.sale_amount ELSE 0 END) AS month_amount,
-                SUM(CASE WHEN YEAR(s.sale_date) = :year AND MONTH(s.sale_date) = :month AND WEEK(s.sale_date, 1) = :latest_week AND (${sellDayFilter}) THEN s.sale_amount ELSE 0 END) AS week_amount,
-                ROW_NUMBER() OVER(PARTITION BY s.sale_group ORDER BY SUM(CASE WHEN YEAR(s.sale_date) = :year AND MONTH(s.sale_date) = :month AND (${sellDayFilter}) THEN s.sale_amount ELSE 0 END) DESC) AS shop_rank
-            FROM sales_table s
-            WHERE (${sellDayFilter})
-            GROUP BY s.sale_group, s.sale_shop
-        )
-        SELECT 
-            gs.group_name,
-            IFNULL(rs.sale_shop, '-') AS sale_shop,
-            IFNULL(rs.year_amount, 0) AS year_amount,
-            IFNULL(rs.month_amount, 0) AS month_amount,
-            IFNULL(rs.week_amount, 0) AS week_amount
-        FROM group_scaffold gs
-        LEFT JOIN ranked_sales rs ON gs.group_id = rs.sale_group AND gs.shop_rank = rs.shop_rank
-        ORDER BY gs.group_id ASC, gs.shop_rank ASC;
-        `;
+        const [data_group_raw] = await promisePool.query(sql_group, { start_date, end_date });
+        const [data_ptype_raw] = await promisePool.query(sql_ptype, { start_date, end_date });
 
-        const [data_group] = await promisePool.query(sql_group, { year, month, sell_day, latest_week });
-        const [data_ptype] = await promisePool.query(sql_ptype, { year, month, sell_day, latest_week });
-        const [raw_data_3shop] = await promisePool.query(sql_3shop, { year, month, sell_day, latest_week });
+        // รวมข้อมูลตาม period
+        const periods = [...new Set([
+            ...data_group_raw.map(d => d.period),
+            ...data_ptype_raw.map(d => d.period)
+        ])].sort();
 
-        const data_3shop = raw_data_3shop.reduce((acc, current) => {
-            let group = acc.find(g => g.group === current.group_name);
-            if (!group) {
-                group = { group: current.group_name, shops: [] };
-                acc.push(group);
-            }
-            group.shops.push({
-                shop_name: current.sale_shop,
-                week_amount: current.week_amount,
-                month_amount: current.month_amount,
-                year_amount: current.year_amount
-            });
-            return acc;
-        }, []);
+        const data = periods.map(period => {
+            const period_group = data_group_raw.filter(d => d.period === period).map(d => ({ name: d.name, amount: d.amount }));
+            const period_ptype = data_ptype_raw.filter(d => d.period === period).map(d => ({ name: d.name, amount: d.amount }));
+            
+            return {
+                period,
+                data_group: period_group,
+                data_ptype: period_ptype
+            };
+        });
 
         res.status(200).json({
             message: "ดึงข้อมูลรายงานการขายสำเร็จ",
-            data: {
-                data_group,
-                data_ptype,
-                data_3shop
-            },
+            data,
             input: {
-                year,
-                month,
+                report_type,
                 sell_day,
-                latest_week
+                start_date,
+                end_date
             }
         });
     } catch (error) {
