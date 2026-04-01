@@ -1091,7 +1091,7 @@ const getReportSale = async (req, res) => {
         let periodSql = '';
         let periodLabelSql = '';
         if (report_type === 'day') {
-            periodSql = "DATE(s.sale_date)";
+            periodSql = "DATE_FORMAT(s.sale_date, '%Y-%m-%d')";
             periodLabelSql = "DATE_FORMAT(s.sale_date, '%Y-%m-%d')";
         } else if (report_type === 'week') {
             periodSql = "YEARWEEK(s.sale_date, 1)";
@@ -1100,7 +1100,7 @@ const getReportSale = async (req, res) => {
             periodSql = "DATE_FORMAT(s.sale_date, '%Y-%m')";
             periodLabelSql = "DATE_FORMAT(s.sale_date, '%Y-%m')";
         } else if (report_type === 'year') {
-            periodSql = "YEAR(s.sale_date)";
+            periodSql = "CAST(YEAR(s.sale_date) AS CHAR)";
             periodLabelSql = "CAST(YEAR(s.sale_date) AS CHAR)";
         } else {
             return res.status(400).json({ message: "ข้อมูล report_type ไม่ถูกต้อง" });
