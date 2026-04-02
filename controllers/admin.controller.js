@@ -1095,7 +1095,7 @@ const getReportSale = async (req, res) => {
             periodLabelSql = "DATE_FORMAT(s.sale_date, '%Y-%m-%d')";
         } else if (report_type === 'week') {
             periodSql = "YEARWEEK(s.sale_date, 1)";
-            periodLabelSql = "CONCAT(DATE_FORMAT(MIN(s.sale_date), '%Y-%m-%d'), ' - ', DATE_FORMAT(MAX(s.sale_date), '%Y-%m-%d'))";
+            periodLabelSql = "CONCAT(DATE_FORMAT(DATE_ADD(DATE_SUB(MIN(s.sale_date), INTERVAL WEEKDAY(MIN(s.sale_date)) DAY), INTERVAL 5 DAY), '%Y-%m-%d'), ' - ', DATE_FORMAT(DATE_ADD(DATE_SUB(MIN(s.sale_date), INTERVAL WEEKDAY(MIN(s.sale_date)) DAY), INTERVAL 6 DAY), '%Y-%m-%d'))";
         } else if (report_type === 'month') {
             periodSql = "DATE_FORMAT(s.sale_date, '%Y-%m')";
             periodLabelSql = "DATE_FORMAT(s.sale_date, '%Y-%m')";
