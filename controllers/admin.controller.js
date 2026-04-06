@@ -1365,6 +1365,8 @@ const getReportMap = async (req, res) => {
                 groupObj.stall.push({
                     stall_id: current.market_id,
                     stall_group: current.group_id,
+                    stall_area: current.market_area,
+                    stall_price: current.market_price,
                     stall_status: current.market_status,
                     stall_shop: isZero ? '-' : current.trader_shop,
                     stall_ptype: isZero ? '-' : current.ptype_name,
