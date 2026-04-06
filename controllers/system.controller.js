@@ -143,8 +143,13 @@ const registerTrader = async (req, res) => {
             return res.status(400).json({ message: "ชื่อผู้ใช้นี้ถูกใช้งานแล้ว กรุณาตั้งชื่อผู้ใช้อื่น" });
         }
 
+        const sql_max = `SELECT IFNULL(MAX(trader_no), 0) + 1 AS next_no FROM trader_table;`;
+        const [maxRows] = await promisePool.query(sql_max);
+        const next_trader_no = maxRows[0].next_no;
+
         const sql = `
         INSERT INTO trader_table (
+            trader_no,
             trader_mtype,
             trader_ptype,
             trader_pname,
@@ -164,6 +169,7 @@ const registerTrader = async (req, res) => {
             trader_pw,
             trader_date
         ) VALUES (
+            :trader_no,
             1,
             :trader_ptype,
             :trader_pname,
@@ -185,7 +191,10 @@ const registerTrader = async (req, res) => {
         );
         `;
 
-        const [rows] = await promisePool.query(sql, req.body);
+        const [rows] = await promisePool.query(sql, {
+            ...req.body,
+            trader_no: next_trader_no
+        });
 
         res.status(200).json({
             message: "สมัครสมาชิกสำเร็จ",
