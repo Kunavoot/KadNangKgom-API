@@ -1332,10 +1332,12 @@ const getReportMap = async (req, res) => {
             g.group_id,
             g.group_name,
             g.group_zone,
+            m.market_area,
+            m.market_price,
             CASE WHEN a.agmt_id IS NOT NULL THEN 1 ELSE 0 END AS market_status,
             IFNULL(t.trader_shop, '-') AS trader_shop,
             IFNULL(pt.ptype_name, '-') AS ptype_name,
-            IFNULL(a.agmt_id, '-') AS agmt_id
+            IFNULL(a.agmt_id, '-') AS agmt_id    
         FROM group_table g
         LEFT JOIN market_table m ON g.group_id = m.market_group
         LEFT JOIN agreement_table a ON m.market_id = a.agmt_market
