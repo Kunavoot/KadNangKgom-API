@@ -94,8 +94,8 @@ const addAdmin = async (req, res) => {
 
     try {
         const [rows] = await promisePool.query(sql_2, {
-            admin_no: next_admin_no,
-            ...req.body
+            ...req.body,
+            admin_no: next_admin_no
         });
 
         res.status(200).json({
@@ -287,8 +287,8 @@ const addTrader = async (req, res) => {
 
     try {
         const [rows] = await promisePool.query(sql, {
-            trader_no: next_trader_no,
-            ...req.body
+            ...req.body,
+            trader_no: next_trader_no
         });
 
         res.status(200).json({
@@ -440,8 +440,8 @@ const addGroup = async (req, res) => {
 
     try {
         const [rows] = await promisePool.query(sql, {
-            group_id: next_group_id,
-            ...req.body
+            ...req.body,
+            group_id: next_group_id
         });
 
         res.status(200).json({
@@ -542,8 +542,8 @@ const addMemberType = async (req, res) => {
 
     try {
         const [rows] = await promisePool.query(sql, {
-            memtype_id: next_memtype_id,
-            ...req.body
+            ...req.body,
+            memtype_id: next_memtype_id
         });
 
         res.status(200).json({
@@ -643,8 +643,8 @@ const addProductType = async (req, res) => {
 
     try {
         const [rows] = await promisePool.query(sql, {
-            ptype_id: next_ptype_id,
-            ...req.body
+            ...req.body,
+            ptype_id: next_ptype_id
         });
 
         res.status(200).json({
