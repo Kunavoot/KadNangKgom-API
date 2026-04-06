@@ -52,8 +52,19 @@ const addAdmin = async (req, res) => {
         res.status(500).json({ message: "เกิดข้อผิดพลาดในการเพิ่มข้อมูลผู้บริหาร" });
     }
 
+    let next_admin_no;
+    try {
+        const sql_max = `SELECT GREATEST(IFNULL(MAX(admin_no), 900000), 900000) + 1 AS next_no FROM admin_table;`;
+        const [maxRows] = await promisePool.query(sql_max);
+        next_admin_no = maxRows[0].next_no;
+    } catch (error) {
+        console.error("Error get max admin_no in:", error);
+        return res.status(500).json({ message: "เกิดข้อผิดพลาดในการเพิ่มข้อมูลผู้บริหาร" });
+    }
+
     const sql_2 = `
     INSERT INTO admin_table (
+        admin_no,
         admin_pname,
         admin_name,
         admin_sname,
@@ -66,6 +77,7 @@ const addAdmin = async (req, res) => {
         admin_pw,
         admin_date
     ) VALUES (
+        :admin_no,
         :admin_pname,
         :admin_name,
         :admin_sname,
@@ -81,7 +93,10 @@ const addAdmin = async (req, res) => {
     `;
 
     try {
-        const [rows] = await promisePool.query(sql_2, req.body);
+        const [rows] = await promisePool.query(sql_2, {
+            admin_no: next_admin_no,
+            ...req.body
+        });
 
         res.status(200).json({
             message: "เพิ่มข้อมูลผู้บริหารสำเร็จ",
@@ -206,8 +221,19 @@ const addTrader = async (req, res) => {
         return res.status(500).json({ message: "เกิดข้อผิดพลาดในการเพิ่มข้อมูลผู้ค้า" });
     }
 
+    let next_trader_no;
+    try {
+        const sql_max = `SELECT IFNULL(MAX(trader_no), 0) + 1 AS next_no FROM trader_table;`;
+        const [maxRows] = await promisePool.query(sql_max);
+        next_trader_no = maxRows[0].next_no;
+    } catch (error) {
+        console.error("Error get max trader_no in:", error);
+        return res.status(500).json({ message: "เกิดข้อผิดพลาดในการเพิ่มข้อมูลผู้ค้า" });
+    }
+
     const sql = `
     INSERT INTO trader_table (
+        trader_no,
         trader_mtype,
         trader_ptype,
         trader_pname,
@@ -232,6 +258,7 @@ const addTrader = async (req, res) => {
         trader_date,
         trader_status
     ) VALUES (
+        :trader_no,
         :trader_mtype,
         :trader_ptype,
         :trader_pname,
@@ -259,7 +286,10 @@ const addTrader = async (req, res) => {
     `;
 
     try {
-        const [rows] = await promisePool.query(sql, req.body);
+        const [rows] = await promisePool.query(sql, {
+            trader_no: next_trader_no,
+            ...req.body
+        });
 
         res.status(200).json({
             message: "เพิ่มข้อมูลผู้ค้าสำเร็จ",
@@ -384,12 +414,24 @@ const getGroup = async (req, res) => {
 }
 
 const addGroup = async (req, res) => {
+    let next_group_id;
+    try {
+        const sql_max = `SELECT IFNULL(MAX(group_id), 0) + 1 AS next_no FROM group_table;`;
+        const [maxRows] = await promisePool.query(sql_max);
+        next_group_id = maxRows[0].next_no;
+    } catch (error) {
+        console.error("Error get max group_id in:", error);
+        return res.status(500).json({ message: "เกิดข้อผิดพลาดในการเพิ่มข้อมูลกลุ่ม" });
+    }
+
     const sql = `
     INSERT INTO group_table (
+        group_id,
         group_name,
         group_zone,
         group_detail
     ) VALUES (
+        :group_id,
         :group_name,
         :group_zone,
         :group_detail
@@ -397,7 +439,10 @@ const addGroup = async (req, res) => {
     `;
 
     try {
-        const [rows] = await promisePool.query(sql, req.body);
+        const [rows] = await promisePool.query(sql, {
+            group_id: next_group_id,
+            ...req.body
+        });
 
         res.status(200).json({
             message: "เพิ่มข้อมูลกลุ่มสำเร็จ",
@@ -473,18 +518,33 @@ const getMemberType = async (req, res) => {
 }
 
 const addMemberType = async (req, res) => {
+    let next_memtype_id;
+    try {
+        const sql_max = `SELECT IFNULL(MAX(memtype_id), 0) + 1 AS next_no FROM member_type_table;`;
+        const [maxRows] = await promisePool.query(sql_max);
+        next_memtype_id = maxRows[0].next_no;
+    } catch (error) {
+        console.error("Error get max memtype_id in:", error);
+        return res.status(500).json({ message: "เกิดข้อผิดพลาดในการเพิ่มข้อมูลประเภทสมาชิก" });
+    }
+
     const sql = `
     INSERT INTO member_type_table (
+        memtype_id,
         memtype_name,
         memtype_detail
     ) VALUES (
+        :memtype_id,
         :memtype_name,
         :memtype_detail
     );
     `;
 
     try {
-        const [rows] = await promisePool.query(sql, req.body);
+        const [rows] = await promisePool.query(sql, {
+            memtype_id: next_memtype_id,
+            ...req.body
+        });
 
         res.status(200).json({
             message: "เพิ่มข้อมูลประเภทสมาชิกสำเร็จ",
@@ -559,18 +619,33 @@ const getProductType = async (req, res) => {
 }
 
 const addProductType = async (req, res) => {
+    let next_ptype_id;
+    try {
+        const sql_max = `SELECT IFNULL(MAX(ptype_id), 0) + 1 AS next_no FROM product_type_table;`;
+        const [maxRows] = await promisePool.query(sql_max);
+        next_ptype_id = maxRows[0].next_no;
+    } catch (error) {
+        console.error("Error get max ptype_id in:", error);
+        return res.status(500).json({ message: "เกิดข้อผิดพลาดในการเพิ่มข้อมูลประเภทสินค้า" });
+    }
+
     const sql = `
     INSERT INTO product_type_table (
+        ptype_id,
         ptype_name,
         ptype_detail
     ) VALUES (
+        :ptype_id,
         :ptype_name,
         :ptype_detail
     );
     `;
 
     try {
-        const [rows] = await promisePool.query(sql, req.body);
+        const [rows] = await promisePool.query(sql, {
+            ptype_id: next_ptype_id,
+            ...req.body
+        });
 
         res.status(200).json({
             message: "เพิ่มข้อมูลประเภทสินค้าสำเร็จ",
@@ -930,8 +1005,13 @@ const addAgreement = async (req, res) => {
             return res.status(400).json({ message: "ไม่พบข้อมูลผู้บริหารในระบบ" });
         }
 
+        const sql_max = `SELECT IFNULL(MAX(agmt_id), 0) + 1 AS next_no FROM agreement_table;`;
+        const [maxRows] = await promisePool.query(sql_max);
+        let next_agmt_id = maxRows[0].next_no;
+
         const sql = `
         INSERT INTO agreement_table (
+            agmt_id,
             agmt_trader,
             agmt_admin,
             agmt_market,
@@ -939,6 +1019,7 @@ const addAgreement = async (req, res) => {
             agmt_start,
             agmt_end
         ) VALUES (
+            :agmt_id,
             :agmt_trader,
             :agmt_admin,
             :agmt_market,
@@ -949,38 +1030,21 @@ const addAgreement = async (req, res) => {
         `;
 
         const updateMarketSql = `UPDATE market_table SET market_status = '1' WHERE market_id = :agmt_market`;
-        
-        let resultData = [];
-        
-        if (Array.isArray(agmt_market)) {
-            for (let market of agmt_market) {
-                const [rows] = await promisePool.query(sql, {
-                    agmt_trader,
-                    agmt_admin,
-                    agmt_market: market,
-                    agmt_status,
-                    agmt_start,
-                    agmt_end
-                });
-                await promisePool.query(updateMarketSql, { agmt_market: market });
-                resultData.push(rows);
-            }
-        } else {
-            const [rows] = await promisePool.query(sql, {
-                agmt_trader,
-                agmt_admin,
-                agmt_market,
-                agmt_status,
-                agmt_start,
-                agmt_end
-            });
-            await promisePool.query(updateMarketSql, { agmt_market });
-            resultData = rows;
-        }
+
+        const [rows] = await promisePool.query(sql, {
+            agmt_id: next_agmt_id,
+            agmt_trader,
+            agmt_admin,
+            agmt_market,
+            agmt_status,
+            agmt_start,
+            agmt_end
+        });
+        await promisePool.query(updateMarketSql, { agmt_market });
 
         res.status(200).json({
             message: "เพิ่มข้อมูลสัญญาเช่าสำเร็จ",
-            data: resultData
+            data: rows
         });
     } catch (error) {
         console.error("Error addAgreement:", error);
