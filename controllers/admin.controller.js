@@ -911,6 +911,7 @@ const getAgreement_Summary = async (req, res) => {
             MAX(CASE WHEN agmt_status IN ('2', '3') THEN 1 ELSE 0 END) AS is_rented_sun
         FROM agreement_table
         WHERE :filterDate BETWEEN agmt_start AND agmt_end
+            AND agmt_isactive = 1
         GROUP BY agmt_market
     ) rented ON m.market_id = rented.agmt_market
     GROUP BY g.group_id, g.group_name
@@ -947,6 +948,7 @@ const getAgreement_Detail = async (req, res) => {
     FROM market_table m
     LEFT JOIN agreement_table a 
         ON m.market_id = a.agmt_market
+        AND a.agmt_isactive = 1
         AND a.agmt_start <= :agmt_end 
         AND a.agmt_end >= :agmt_start
         AND (
@@ -1077,6 +1079,7 @@ const getAgreement_List = async (req, res) => {
     LEFT JOIN market_table m ON a.agmt_market = m.market_id
     LEFT JOIN product_type_table pt ON t.trader_ptype = pt.ptype_id
     WHERE m.market_group = :group_id
+        AND a.agmt_isactive = 1
         AND a.agmt_start <= :agmt_end 
         AND a.agmt_end >= :agmt_start
         AND (
@@ -1113,8 +1116,8 @@ const delAgreement = async (req, res) => {
         return res.status(400).json({ message: "กรุณาระบุข้อมูลให้ครบถ้วน" });
     }
 
-    const sqlDelete = `DELETE FROM agreement_table WHERE agmt_id = :agmt_id`;
-    const sqlCheck = `SELECT COUNT(*) AS count FROM agreement_table WHERE agmt_market = :agmt_market`;
+    const sqlDelete = `UPDATE agreement_table SET agmt_isactive = 0 WHERE agmt_id = :agmt_id AND agmt_isactive = 1`;
+    const sqlCheck = `SELECT COUNT(*) AS count FROM agreement_table WHERE agmt_market = :agmt_market AND agmt_isactive = 1`;
     const sqlUpdateMarket = `UPDATE market_table SET market_status = '0' WHERE market_id = :agmt_market`;
 
     try {
@@ -1341,6 +1344,7 @@ const getReportMap = async (req, res) => {
         FROM group_table g
         LEFT JOIN market_table m ON g.group_id = m.market_group
         LEFT JOIN agreement_table a ON m.market_id = a.agmt_market
+            AND a.agmt_isactive = 1
             AND :date BETWEEN a.agmt_start AND a.agmt_end
             AND (
                 (:sell_day = '1' AND a.agmt_status IN ('1', '3')) OR

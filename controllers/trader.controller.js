@@ -136,7 +136,8 @@ const getAgreement = async (req, res) => {
     FROM agreement_table a
     JOIN market_table m ON a.agmt_market = m.market_id
     JOIN group_table g ON m.market_group = g.group_id
-    WHERE a.agmt_trader = :trader_no`;
+    WHERE a.agmt_trader = :trader_no
+        AND a.agmt_isactive = 1`;
 
     try {
         const [rows] = await promisePool.query(sql, {
@@ -173,7 +174,9 @@ const sendSales = async (req, res) => {
     }
 
     const sql_date = `
-    SELECT * FROM agreement_table WHERE agmt_start > :sale_date AND agmt_end < :sale_date AND agmt_id = :sale_id;
+    SELECT * FROM agreement_table
+    WHERE agmt_id = :sale_id
+        AND agmt_isactive = 1;
     `;
 
     try {
@@ -182,7 +185,16 @@ const sendSales = async (req, res) => {
             sale_id: req.body.sale_id
         });
 
-        if (rows.length > 0) {
+        if (rows.length === 0) {
+            return res.status(400).json({ message: "ไม่พบสัญญาที่ใช้งานอยู่" });
+        }
+
+        const agreement = rows[0];
+        const saleDate = new Date(req.body.sale_date);
+        const agmtStart = new Date(agreement.agmt_start);
+        const agmtEnd = new Date(agreement.agmt_end);
+
+        if (saleDate < agmtStart || saleDate > agmtEnd) {
             return res.status(400).json({ message: "วันที่ส่งยอดขายมากกว่าหรือน้อยกว่าที่กำหนด" });
         }
     } catch (error) {
