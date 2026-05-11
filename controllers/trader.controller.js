@@ -155,6 +155,31 @@ const getAgreement = async (req, res) => {
 }
 
 const sendSales = async (req, res) => {
+    if (!req.body.sale_trader) {
+        return res.status(400).json({ message: "กรุณาระบุรหัสผู้ค้า (sale_trader)" });
+    }
+
+    const sql_trader_status = `
+    SELECT trader_status FROM trader_table WHERE trader_no = :sale_trader;
+    `;
+
+    try {
+        const [traderRows] = await promisePool.query(sql_trader_status, {
+            sale_trader: req.body.sale_trader
+        });
+        
+        if (traderRows.length === 0) {
+            return res.status(400).json({ message: "ไม่พบข้อมูลผู้ค้าในระบบ" });
+        }
+        
+        if (traderRows[0].trader_status === '0') {
+            return res.status(400).json({ message: "ผู้ค้านี้ไม่ได้อยู่ในสถานะกำลังค้าขาย" });
+        }
+    } catch (error) {
+        console.error("Error validating trader status in sendSales:", error);
+        return res.status(500).json({ message: "เกิดข้อผิดพลาดในการตรวจสอบสถานะผู้ค้า" });
+    }
+
     const sql_validate = `
     SELECT * FROM sales_table WHERE sale_date = :sale_date AND sale_id = :sale_id;
     `;

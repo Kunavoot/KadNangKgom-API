@@ -995,10 +995,13 @@ const addAgreement = async (req, res) => {
     }
 
     try {
-        const checkTraderSql = 'SELECT trader_no FROM trader_table WHERE trader_no = :agmt_trader';
+        const checkTraderSql = 'SELECT trader_no, trader_status FROM trader_table WHERE trader_no = :agmt_trader';
         const [traderRows] = await promisePool.query(checkTraderSql, { agmt_trader });
         if (traderRows.length === 0) {
             return res.status(400).json({ message: "ไม่พบข้อมูลผู้ค้าในระบบ" });
+        }
+        if (traderRows[0].trader_status === '0') {
+            return res.status(400).json({ message: "ผู้ค้านี้ไม่ได้อยู่ในสถานะกำลังค้าขาย" });
         }
 
         const checkAdminSql = 'SELECT admin_no FROM admin_table WHERE admin_no = :agmt_admin';
